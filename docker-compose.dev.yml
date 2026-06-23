@@ -1,0 +1,21 @@
+services:
+  api:
+    image: golang:1.26-alpine
+    working_dir: /app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/go_lang?sslmode=disable
+    command: >-
+      sh -c "go install github.com/air-verse/air@latest &&
+      air -c .air.toml"
+    volumes:
+      - .:/app
+      - go_dev_cache:/go
+    ports:
+      - "8080:8080"
+
+volumes:
+  go_dev_cache:
