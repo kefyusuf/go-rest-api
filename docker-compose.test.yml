@@ -1,0 +1,21 @@
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    container_name: go-lang-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: go_lang_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d go_lang_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_test_data:
