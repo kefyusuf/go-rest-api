@@ -1,0 +1,14 @@
+package model
+
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+type MessageResponse struct {
+	Message string `json:"message"`
+}
+
+type HealthResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
