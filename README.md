@@ -1072,16 +1072,75 @@ Returns a single user.
 
 ### POST /users
 
-Creates a new user.
+Creates a new user. The password is hashed with bcrypt before it is
+stored; it is never returned in any response.
 
 Example request body:
 
 ```json
 {
   "name": "Ada Lovelace",
+  "email": "ada@example.com",
+  "password": "correct-horse-battery-staple"
+}
+```
+
+### POST /auth/login
+
+Exchanges email and password for a short-lived JWT bearer token.
+
+Example request body:
+
+```json
+{
+  "email": "ada@example.com",
+  "password": "correct-horse-battery-staple"
+}
+```
+
+Successful response (`200 OK`):
+
+```json
+{
+  "accessToken": "<jwt>",
+  "tokenType": "Bearer",
+  "expiresIn": 900,
+  "expiresAt": "2026-06-29T13:00:00Z",
+  "user": {
+    "id": 1,
+    "name": "Ada Lovelace",
+    "email": "ada@example.com"
+  }
+}
+```
+
+Invalid credentials return `401 Unauthorized` with a generic
+`UNAUTHORIZED` code and the message `invalid email or password`. The
+message is the same whether the email is unknown or the password is
+wrong, so it does not leak which side failed.
+
+### GET /me
+
+Returns the user behind a valid bearer token.
+
+Example request:
+
+```bash
+curl http://localhost:8080/me \
+  -H "Authorization: Bearer <jwt>"
+```
+
+Successful response (`200 OK`):
+
+```json
+{
+  "id": 1,
+  "name": "Ada Lovelace",
   "email": "ada@example.com"
 }
 ```
+
+Missing, malformed, or expired tokens return `401 Unauthorized`.
 
 ### PUT /users/{id}
 
@@ -1129,7 +1188,7 @@ curl http://localhost:8080/health
 ```bash
 curl -X POST http://localhost:8080/users \
   -H "Content-Type: application/json" \
-  -d '{"name":"Ada Lovelace","email":"ada@example.com"}'
+  -d '{"name":"Ada Lovelace","email":"ada@example.com","password":"correct-horse-battery-staple"}'
 ```
 
 ### 3. List all users
@@ -1160,7 +1219,7 @@ curl -X DELETE http://localhost:8080/users/1
 ```bash
 curl -X POST http://localhost:8080/users \
   -H "Content-Type: application/json" \
-  -d '{"name":"Ada Lovelace","email":"ada@example.com"}'
+  -d '{"name":"Ada Lovelace","email":"ada@example.com","password":"correct-horse-battery-staple"}'
 ```
 
 The second call returns `409 Conflict` with a `CONFLICT` error code.
@@ -1182,6 +1241,17 @@ field-level `details`.
 |---|---|---|---|
 | `PORT` | inside the API container | `8080` | Port the API listens on |
 | `DATABASE_URL` | API application and PostgreSQL integration tests | `postgres://postgres:postgres@postgres:5432/go_lang?sslmode=disable` | PostgreSQL connection URL for the application |
+| `JWTSecret` | API application | at least 32 random bytes | Secret used to sign JWT access tokens. Required. |
+| `ACCESS_TOKEN_TTL` | API application | `15m` | Lifetime of an access token |
+| `BcryptCost` | API application | `10` | bcrypt cost factor used when hashing passwords |
+| `APP_ENV` | API application | `development` | Environment name; emitted as the JWT `iss` claim |
+| `READ_HEADER_TIMEOUT` | API application | `5s` | HTTP read header timeout |
+| `READ_TIMEOUT` | API application | `15s` | HTTP read timeout |
+| `WRITE_TIMEOUT` | API application | `15s` | HTTP write timeout |
+| `IDLE_TIMEOUT` | API application | `60s` | HTTP idle timeout |
+| `MAX_HEADER_BYTES` | API application | `1048576` | Maximum header size in bytes |
+| `MAX_BODY_BYTES` | API application | `1048576` | Maximum request body size in bytes |
+| `SHUTDOWN_TIMEOUT` | API application | `15s` | Maximum time to drain in-flight requests on shutdown |
 
 ## Docker network logic
 

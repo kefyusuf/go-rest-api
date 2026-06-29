@@ -16,13 +16,14 @@ import (
 )
 
 func TestUsersCRUDFlow(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{BcryptCost: 4})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
 	created := createUser(t, ts.URL, model.CreateUserRequest{
-		Name:  "Ada Lovelace",
-		Email: "ada@example.com",
+		Name:     "Ada Lovelace",
+		Email:    "ada@example.com",
+		Password: "correct-password",
 	})
 
 	if created.ID != 1 {
@@ -79,18 +80,20 @@ func TestUsersCRUDFlow(t *testing.T) {
 }
 
 func TestUsersDuplicateEmailReturnsConflict(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{BcryptCost: 4})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
 	createUser(t, ts.URL, model.CreateUserRequest{
-		Name:  "Ada Lovelace",
-		Email: "ada@example.com",
+		Name:     "Ada Lovelace",
+		Email:    "ada@example.com",
+		Password: "correct-password",
 	})
 
 	body := mustJSON(t, model.CreateUserRequest{
-		Name:  "Grace Hopper",
-		Email: "ada@example.com",
+		Name:     "Grace Hopper",
+		Email:    "ada@example.com",
+		Password: "correct-password",
 	})
 
 	res, err := http.Post(ts.URL+"/users", "application/json", bytes.NewReader(body))
@@ -114,7 +117,7 @@ func TestUsersDuplicateEmailReturnsConflict(t *testing.T) {
 }
 
 func TestUsersValidationErrors(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{BcryptCost: 4})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
@@ -155,7 +158,7 @@ func TestUsersValidationErrors(t *testing.T) {
 }
 
 func TestUsersCreateRejectsUnsupportedMediaType(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{BcryptCost: 4})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
@@ -180,13 +183,14 @@ func TestUsersCreateRejectsUnsupportedMediaType(t *testing.T) {
 }
 
 func TestUsersUpdateRejectsUnsupportedMediaType(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{BcryptCost: 4})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
 	created := createUser(t, ts.URL, model.CreateUserRequest{
-		Name:  "Ada Lovelace",
-		Email: "ada@example.com",
+		Name:     "Ada Lovelace",
+		Email:    "ada@example.com",
+		Password: "correct-password",
 	})
 
 	req, err := http.NewRequest(http.MethodPut, ts.URL+"/users/"+intToString(created.ID), bytes.NewReader([]byte("not-json")))
@@ -216,7 +220,7 @@ func TestUsersUpdateRejectsUnsupportedMediaType(t *testing.T) {
 }
 
 func TestUsersCreateRejectsMalformedJSON(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{BcryptCost: 4})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
@@ -241,7 +245,7 @@ func TestUsersCreateRejectsMalformedJSON(t *testing.T) {
 }
 
 func TestUsersCreateRejectsEmptyBody(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{BcryptCost: 4})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
@@ -266,13 +270,14 @@ func TestUsersCreateRejectsEmptyBody(t *testing.T) {
 }
 
 func TestUsersUpdateRejectsMalformedJSON(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{BcryptCost: 4})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
 	created := createUser(t, ts.URL, model.CreateUserRequest{
-		Name:  "Ada Lovelace",
-		Email: "ada@example.com",
+		Name:     "Ada Lovelace",
+		Email:    "ada@example.com",
+		Password: "correct-password",
 	})
 
 	req, err := http.NewRequest(http.MethodPut, ts.URL+"/users/"+intToString(created.ID), bytes.NewReader([]byte("{")))
