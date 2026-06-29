@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	_ "go-lang/docs"
+	"go-lang/internal/auth"
 	"go-lang/internal/config"
 	"go-lang/internal/database"
 	"go-lang/internal/server"
@@ -33,6 +34,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := cfg.Validate(); err != nil {
+		logger.Error("invalid config", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	issuer, err := auth.NewTokenIssuer(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.Environment)
+	if err != nil {
+		logger.Error("failed to build token issuer", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
 	userStore, cleanup, err := buildUserStore(cfg, logger)
 	if err != nil {
 		logger.Error("failed to build user store", slog.String("error", err.Error()))
@@ -43,6 +55,8 @@ func main() {
 	addr := ":" + cfg.Port
 	app := server.New(userStore, logger, server.Options{
 		MaxBodyBytes: cfg.MaxBodyBytes,
+		TokenIssuer:  issuer,
+		BcryptCost:   cfg.BcryptCost,
 	})
 
 	srv := &http.Server{
