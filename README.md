@@ -1417,6 +1417,37 @@ The starter ships a single mock job, `welcome_email`, that simply
 logs that it ran. Real handlers can be added by calling
 `jobReg.Register("type", jobs.HandlerFunc(...))` in `main.go`.
 
+## Event publishing (outbox)
+
+`internal/events` is a small publish-subscribe layer that follows
+the outbox pattern: handlers that want to emit an event call
+`outbox.Enqueue(...)`; a background dispatcher reads the outbox
+and forwards every event to the active `Publisher`.
+
+The starter ships a `LoggingPublisher` that just logs the event
+attributes. The `Publisher` interface is intentionally small so
+the in-memory implementation can be replaced with Kafka (via
+`segmentio/kafka-go` or `IBM/sarama`) or another broker without
+changing the call sites. The dispatcher owns the outbox drain and
+the publisher lifecycle, so swapping the publisher is a one-line
+change in `main.go`.
+
+Why an outbox? The transaction that creates the user and the
+write that records the event happen in the same logical step,
+even when the actual broker is a separate process. A handler that
+calls the broker directly can lose the event if the broker is down
+between the two writes; the outbox collapses that to a single
+in-process write that the dispatcher flushes at-least-once.
+
+In the starter, the outbox is in-process memory. Production should
+back it with the same database the user store uses (a `outbox`
+table is enough) so events survive a process restart.
+
+The starter emits one event: `user.created`, published with the
+key being the new user id and the payload being a small JSON
+document with `id`, `name`, and `email`. Real applications add
+more events (`user.updated`, `user.deleted`, ...).
+
 ## Caching
 
 `GET /users/{id}` and `GET /me` are served through a read-through
