@@ -419,3 +419,54 @@ func decodeJSON(t *testing.T, reader io.Reader, target any) {
 func intToString(value int) string {
 	return strconv.Itoa(value)
 }
+
+func TestMethodNotAllowedIncludesAllowHeader(t *testing.T) {
+	app := server.New(store.NewMemoryUserStore())
+	ts := httptest.NewServer(app)
+	defer ts.Close()
+
+	req, _ := http.NewRequest(http.MethodPatch, ts.URL+"/users", nil)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("patch: %v", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405, got %d", res.StatusCode)
+	}
+	if got := res.Header.Get("Allow"); got != "GET, POST" {
+		t.Fatalf("expected Allow=GET, POST on /users, got %q", got)
+	}
+
+	req2, _ := http.NewRequest(http.MethodPatch, ts.URL+"/users/1", nil)
+	res2, err := http.DefaultClient.Do(req2)
+	if err != nil {
+		t.Fatalf("patch /users/1: %v", err)
+	}
+	defer res2.Body.Close()
+
+	if res2.StatusCode != http.StatusMethodNotAllowed {
+		t.Fatalf("expected 405, got %d", res2.StatusCode)
+	}
+	if got := res2.Header.Get("Allow"); got != "GET, PUT, DELETE" {
+		t.Fatalf("expected Allow=GET, PUT, DELETE on /users/{id}, got %q", got)
+	}
+}
+
+func TestCreateUserRejectsBodyWithTrailingData(t *testing.T) {
+	app := server.New(store.NewMemoryUserStore())
+	ts := httptest.NewServer(app)
+	defer ts.Close()
+
+	body := []byte(`{"name":"Ada","email":"ada@example.com"}{"extra":1}`)
+	res, err := http.Post(ts.URL+"/users", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("post: %v", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 for trailing data, got %d", res.StatusCode)
+	}
+}

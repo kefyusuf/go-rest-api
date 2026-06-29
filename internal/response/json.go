@@ -3,6 +3,7 @@ package response
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"go-lang/internal/model"
 )
@@ -38,7 +39,10 @@ func Conflict(w http.ResponseWriter, code, message string) {
 	Error(w, http.StatusConflict, code, message, nil)
 }
 
-func MethodNotAllowed(w http.ResponseWriter, code, message string) {
+func MethodNotAllowed(w http.ResponseWriter, allow []string, code, message string) {
+	if len(allow) > 0 {
+		w.Header().Set("Allow", strings.Join(allow, ", "))
+	}
 	Error(w, http.StatusMethodNotAllowed, code, message, nil)
 }
 

@@ -108,6 +108,12 @@
                             "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -230,6 +236,12 @@
                             "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -240,9 +252,6 @@
             },
             "delete": {
                 "description": "Deletes a user",
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "users"
                 ],

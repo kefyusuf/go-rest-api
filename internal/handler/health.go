@@ -23,7 +23,7 @@ func NewHealthHandler() HealthHandler {
 // @Router /health [get]
 func (h HealthHandler) Check(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
+		response.MethodNotAllowed(w, []string{http.MethodGet}, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 

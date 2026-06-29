@@ -24,7 +24,7 @@ func New(userStore store.UserStore) http.Handler {
 		case http.MethodPost:
 			userHandler.CreateUser(w, r)
 		default:
-			response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
+			response.MethodNotAllowed(w, []string{http.MethodGet, http.MethodPost}, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		}
 	})
 	mux.HandleFunc("/users/", func(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +36,7 @@ func New(userStore store.UserStore) http.Handler {
 		case http.MethodDelete:
 			userHandler.DeleteUser(w, r)
 		default:
-			response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
+			response.MethodNotAllowed(w, []string{http.MethodGet, http.MethodPut, http.MethodDelete}, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		}
 	})
 	mux.Handle("/swagger/", httpSwagger.WrapHandler)
