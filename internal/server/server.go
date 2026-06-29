@@ -12,7 +12,11 @@ import (
 	"go-lang/internal/store"
 )
 
-func New(userStore store.UserStore, logger *slog.Logger) http.Handler {
+type Options struct {
+	MaxBodyBytes int64
+}
+
+func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Handler {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -46,10 +50,21 @@ func New(userStore store.UserStore, logger *slog.Logger) http.Handler {
 	})
 	mux.Handle("/swagger/", httpSwagger.WrapHandler)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			response.NotFound(w, model.ErrorCodeNotFound, "not found")
+			return
+		}
 		response.JSON(w, http.StatusOK, map[string]string{
 			"message": "Welcome to the Go API starter",
 		})
 	})
 
-	return RequestID(AccessLog(logger)(mux))
+	chain := RequestID(
+		Recovery(logger)(
+			AccessLog(logger)(
+				BodyLimit(opts.MaxBodyBytes)(mux),
+			),
+		),
+	)
+	return chain
 }
