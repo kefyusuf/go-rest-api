@@ -1,4 +1,20 @@
+# Ignore everything that should not end up in the build context.
 .git
-.wrongstack
-node_modules
+.github
+.gitignore
+.dockerignore
+.air.toml
+.env
+.env.example
+*.md
+deploy
+docs
+scripts
+tmp
 bin
+.vscode
+.idea
+*.log
+coverage.out
+*.test
+*.out

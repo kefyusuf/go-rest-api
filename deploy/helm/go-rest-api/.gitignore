@@ -1,0 +1,16 @@
+{{- /* .gitignore-style */ -}}
+# Help avoid diffs when generated.
+.git/
+.gitattributes
+.helmignore
+README.md
+*.tmproj
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+.DS_Store
+.idea/
+.vscode/
+*.iml
