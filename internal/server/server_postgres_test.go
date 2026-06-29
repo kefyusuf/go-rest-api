@@ -105,8 +105,11 @@ func TestUsersDuplicateEmailWithPostgresReturnsConflict(t *testing.T) {
 
 	var errorResponse model.ErrorResponse
 	decodePostgresJSON(t, res.Body, &errorResponse)
-	if errorResponse.Error != "email already exists" {
-		t.Fatalf("expected duplicate email error, got %q", errorResponse.Error)
+	if errorResponse.Error.Code != model.ErrorCodeConflict {
+		t.Fatalf("expected CONFLICT error code, got %q", errorResponse.Error.Code)
+	}
+	if errorResponse.Error.Message != "email already exists" {
+		t.Fatalf("expected duplicate email error, got %q", errorResponse.Error.Message)
 	}
 }
 
@@ -208,8 +211,8 @@ func deletePostgresUser(t *testing.T, baseURL string, id int) {
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200 on delete, got %d", res.StatusCode)
+	if res.StatusCode != http.StatusNoContent {
+		t.Fatalf("expected 204 on delete, got %d", res.StatusCode)
 	}
 }
 
