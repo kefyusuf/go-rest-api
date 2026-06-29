@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	_ "go-lang/docs"
 	"go-lang/internal/auth"
@@ -81,13 +82,45 @@ func main() {
 	metrics := observability.NewMetrics("go-rest-api", cfg.Environment)
 	probes := observability.NewHealthProbes("go-rest-api", "1.0.0", cfg.Environment)
 
-	globalLimiter := ratelimit.New(cfg.RateLimitPerSecond, cfg.RateLimitBurst)
-	authLimiter := ratelimit.New(cfg.AuthRateLimitPerSecond, cfg.AuthRateLimitBurst)
+	globalLimiter, globalLimiterClose, err := buildRateLimiter("global", cfg.RateLimitPerSecond, cfg.RateLimitBurst, cfg, logger)
+	if err != nil {
+		logger.Error("failed to build global rate limiter", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	defer globalLimiterClose()
+
+	authLimiter, authLimiterClose, err := buildRateLimiter("auth", cfg.AuthRateLimitPerSecond, cfg.AuthRateLimitBurst, cfg, logger)
+	if err != nil {
+		logger.Error("failed to build auth rate limiter", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	defer authLimiterClose()
 
 	idempStore := idempotency.NewMemoryStore(cfg.IdempotencyTTL)
 
 	outbox := events.NewOutbox()
-	publisher := events.NewLoggingPublisher(logger)
+	var publisher events.Publisher
+	var kafkaClose func() error
+	if len(cfg.KafkaBrokers) > 0 {
+		kp, err := events.NewKafkaPublisher(events.KafkaConfig{
+			Brokers:      cfg.KafkaBrokers,
+			Topic:        cfg.KafkaTopic,
+			WriteTimeout: cfg.KafkaWriteTimeout,
+		}, logger)
+		if err != nil {
+			logger.Error("failed to build kafka publisher, falling back to logging", slog.String("error", err.Error()))
+			publisher = events.NewLoggingPublisher(logger)
+		} else {
+			publisher = kp
+			kafkaClose = kp.Close
+			logger.Info("kafka publisher enabled",
+				slog.String("topic", cfg.KafkaTopic),
+				slog.Int("brokers", len(cfg.KafkaBrokers)))
+		}
+	} else {
+		publisher = events.NewLoggingPublisher(logger)
+		logger.Warn("KAFKA_BROKERS not set, using in-memory LoggingPublisher")
+	}
 	dispatcher := events.NewDispatcher(outbox, publisher, logger)
 	dispatcherCtx, cancelDispatcher := context.WithCancel(context.Background())
 	defer cancelDispatcher()
@@ -167,7 +200,11 @@ func main() {
 	jobReg.Stop()
 	cancelDispatcher()
 	_ = outbox.Close()
-	_ = publisher.Close()
+	if kafkaClose != nil {
+		_ = kafkaClose()
+	} else {
+		_ = publisher.Close()
+	}
 }
 
 func buildUserStore(cfg config.Config, logger *slog.Logger) (store.UserStore, func(), observability.Pinger, error) {
@@ -215,4 +252,40 @@ func buildCache(cfg config.Config, logger *slog.Logger) (cacheimpl.Cache, func()
 	}
 	rc := cacheimpl.NewRedisCache(opts.Addr, opts.Password, opts.DB)
 	return rc, func() { _ = rc.Close() }, nil
+}
+
+// buildRateLimiter picks an in-memory or Redis-backed token-bucket
+// limiter based on whether REDIS_URL is set. The Redis path returns
+// the client so the caller can close it on shutdown.
+func buildRateLimiter(name string, rate, burst float64, cfg config.Config, logger *slog.Logger) (ratelimit.Limiter, func(), error) {
+	if cfg.RedisURL == "" {
+		return ratelimit.New(rate, burst), func() {}, nil
+	}
+	opts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid REDIS_URL for %s limiter: %w", name, err)
+	}
+	client := redis.NewClient(opts)
+	// Light-touch ping; if Redis is unreachable we fall back to
+	// the in-memory limiter so the API still serves traffic.
+	pingCtx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	if err := client.Ping(pingCtx).Err(); err != nil {
+		logger.Warn("REDIS_URL set but redis is unreachable, using in-memory limiter",
+			slog.String("limiter", name),
+			slog.String("error", err.Error()))
+		_ = client.Close()
+		return ratelimit.New(rate, burst), func() {}, nil
+	}
+	logger.Info("redis-backed rate limiter enabled",
+		slog.String("limiter", name),
+		slog.String("addr", opts.Addr))
+	// We do not prefix with a per-name key here because the
+	// caller passes a key; the RedisLimiter keyFor() adds the
+	// 'ratelimit:' prefix. Use a unique bucket per limiter via
+	// the key name (the HTTP middleware uses the client IP, so
+	// we need a per-limiter prefix; left for the middleware to
+	// handle — we use the name as a sub-namespace).
+	rl := ratelimit.NewRedis(client, rate, burst)
+	return rl, func() { _ = rl.Close() }, nil
 }

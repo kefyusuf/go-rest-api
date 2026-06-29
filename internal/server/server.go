@@ -28,8 +28,8 @@ type Options struct {
 	HealthProbes  *observability.HealthProbes
 	DBPinger      observability.Pinger
 
-	GlobalLimiter *ratelimit.Limiter
-	AuthLimiter   *ratelimit.Limiter
+	GlobalLimiter ratelimit.Limiter
+	AuthLimiter   ratelimit.Limiter
 	CORS          CORSConfig
 
 	IdempotencyStore *idempotency.MemoryStore
