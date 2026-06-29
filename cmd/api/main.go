@@ -15,6 +15,7 @@ import (
 	"go-lang/internal/config"
 	"go-lang/internal/database"
 	"go-lang/internal/idempotency"
+	"go-lang/internal/jobs"
 	"go-lang/internal/observability"
 	"go-lang/internal/ratelimit"
 	"go-lang/internal/server"
@@ -102,6 +103,18 @@ func main() {
 		},
 	})
 
+	jobQueue := jobs.NewMemoryQueue()
+	jobDead := jobs.NewMemoryDeadLetter()
+	jobReg := jobs.NewRegistry(jobQueue, jobDead, logger)
+	jobReg.Register("welcome_email", jobs.HandlerFunc(func(_ context.Context, _ jobs.Job) error {
+		logger.Info("welcome email job ran (mock)")
+		return nil
+	}))
+
+	jobCtx, cancelJobs := context.WithCancel(context.Background())
+	defer cancelJobs()
+	jobReg.Start(jobCtx, 2)
+
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           app,
@@ -140,6 +153,9 @@ func main() {
 		}
 		logger.Info("server stopped cleanly")
 	}
+
+	cancelJobs()
+	jobReg.Stop()
 }
 
 func buildUserStore(cfg config.Config, logger *slog.Logger) (store.UserStore, func(), observability.Pinger, error) {
