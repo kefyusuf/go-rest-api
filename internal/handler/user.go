@@ -9,17 +9,19 @@ import (
 	"strconv"
 	"strings"
 
+	"go-lang/internal/auth"
 	"go-lang/internal/model"
 	"go-lang/internal/response"
 	"go-lang/internal/store"
 )
 
 type UserHandler struct {
-	store store.UserStore
+	store      store.UserStore
+	bcryptCost int
 }
 
-func NewUserHandler(store store.UserStore) UserHandler {
-	return UserHandler{store: store}
+func NewUserHandler(store store.UserStore, bcryptCost int) UserHandler {
+	return UserHandler{store: store, bcryptCost: bcryptCost}
 }
 
 // ListUsers godoc
@@ -81,10 +83,17 @@ func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if details := validateUserInput(input.Name, input.Email); details != nil {
+	if details := validateUserInput(input.Name, input.Email, input.Password); details != nil {
 		response.BadRequest(w, model.ErrorCodeValidation, "validation failed", details)
 		return
 	}
+
+	hashed, err := auth.HashPassword(input.Password, h.bcryptCost)
+	if err != nil {
+		response.InternalError(w, model.ErrorCodeInternal, "internal server error")
+		return
+	}
+	input.Password = hashed
 
 	user, err := h.store.Create(input)
 	if err != nil {
@@ -92,6 +101,7 @@ func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user.PasswordHash = ""
 	response.JSON(w, http.StatusCreated, user)
 }
 
@@ -166,7 +176,7 @@ func (h UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if details := validateUserInput(input.Name, input.Email); details != nil {
+	if details := validateUpdateUserInput(input.Name, input.Email); details != nil {
 		response.BadRequest(w, model.ErrorCodeValidation, "validation failed", details)
 		return
 	}
@@ -226,7 +236,29 @@ func userIDFromPath(path string) (int, error) {
 	return id, nil
 }
 
-func validateUserInput(name, email string) map[string][]string {
+func validateUserInput(name, email, password string) map[string][]string {
+	details := make(map[string][]string)
+
+	if strings.TrimSpace(name) == "" {
+		details["name"] = append(details["name"], "required")
+	}
+
+	if strings.TrimSpace(email) == "" {
+		details["email"] = append(details["email"], "required")
+	}
+
+	if password == "" {
+		details["password"] = append(details["password"], "required")
+	}
+
+	if len(details) == 0 {
+		return nil
+	}
+
+	return details
+}
+
+func validateUpdateUserInput(name, email string) map[string][]string {
 	details := make(map[string][]string)
 
 	if strings.TrimSpace(name) == "" {

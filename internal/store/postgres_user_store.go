@@ -17,8 +17,20 @@ func NewPostgresUserStore(db *sql.DB) *PostgresUserStore {
 	return &PostgresUserStore{db: db}
 }
 
+const userSelectColumns = `id, name, email, password_hash, created_at, updated_at`
+
+func scanUser(scanner interface {
+	Scan(dest ...any) error
+}) (model.User, error) {
+	var user model.User
+	if err := scanner.Scan(&user.ID, &user.Name, &user.Email, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt); err != nil {
+		return model.User{}, err
+	}
+	return user, nil
+}
+
 func (s *PostgresUserStore) List() ([]model.User, error) {
-	rows, err := s.db.Query(`SELECT id, name, email FROM users ORDER BY id`)
+	rows, err := s.db.Query(`SELECT ` + userSelectColumns + ` FROM users ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
@@ -26,8 +38,8 @@ func (s *PostgresUserStore) List() ([]model.User, error) {
 
 	users := []model.User{}
 	for rows.Next() {
-		var user model.User
-		if err := rows.Scan(&user.ID, &user.Name, &user.Email); err != nil {
+		user, err := scanUser(rows)
+		if err != nil {
 			return nil, err
 		}
 		users = append(users, user)
@@ -41,46 +53,56 @@ func (s *PostgresUserStore) List() ([]model.User, error) {
 }
 
 func (s *PostgresUserStore) GetByID(id int) (model.User, error) {
-	var user model.User
-
-	err := s.db.QueryRow(`SELECT id, name, email FROM users WHERE id = $1`, id).Scan(&user.ID, &user.Name, &user.Email)
+	row := s.db.QueryRow(`SELECT `+userSelectColumns+` FROM users WHERE id = $1`, id)
+	user, err := scanUser(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.User{}, ErrUserNotFound
 		}
 		return model.User{}, err
 	}
+	return user, nil
+}
 
+func (s *PostgresUserStore) GetByEmail(email string) (model.User, error) {
+	row := s.db.QueryRow(`SELECT `+userSelectColumns+` FROM users WHERE email = $1`, email)
+	user, err := scanUser(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.User{}, ErrUserNotFound
+		}
+		return model.User{}, err
+	}
 	return user, nil
 }
 
 func (s *PostgresUserStore) Create(input model.CreateUserRequest) (model.User, error) {
-	var user model.User
-
-	err := s.db.QueryRow(
-		`INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id, name, email`,
+	row := s.db.QueryRow(
+		`INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3)
+		 RETURNING `+userSelectColumns,
 		input.Name,
 		input.Email,
-	).Scan(&user.ID, &user.Name, &user.Email)
+		input.Password,
+	)
+	user, err := scanUser(row)
 	if err != nil {
 		if isUniqueViolation(err) {
 			return model.User{}, ErrEmailAlreadyExists
 		}
 		return model.User{}, err
 	}
-
 	return user, nil
 }
 
 func (s *PostgresUserStore) Update(id int, input model.UpdateUserRequest) (model.User, error) {
-	var user model.User
-
-	err := s.db.QueryRow(
-		`UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING id, name, email`,
+	row := s.db.QueryRow(
+		`UPDATE users SET name = $1, email = $2 WHERE id = $3
+		 RETURNING `+userSelectColumns,
 		input.Name,
 		input.Email,
 		id,
-	).Scan(&user.ID, &user.Name, &user.Email)
+	)
+	user, err := scanUser(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return model.User{}, ErrUserNotFound
@@ -90,7 +112,6 @@ func (s *PostgresUserStore) Update(id int, input model.UpdateUserRequest) (model
 		}
 		return model.User{}, err
 	}
-
 	return user, nil
 }
 

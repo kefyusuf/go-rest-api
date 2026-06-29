@@ -1,14 +1,20 @@
 package model
 
+import "time"
+
 type User struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID           int       `json:"id"`
+	Name         string    `json:"name"`
+	Email        string    `json:"email"`
+	PasswordHash string    `json:"-"`
+	CreatedAt    time.Time `json:"-"`
+	UpdatedAt    time.Time `json:"-"`
 }
 
 type CreateUserRequest struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 type UpdateUserRequest struct {

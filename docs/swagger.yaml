@@ -6,6 +6,8 @@ definitions:
         type: string
       name:
         type: string
+      password:
+        type: string
     type: object
   go-lang_internal_model.ErrorDetail:
     properties:
@@ -48,6 +50,26 @@ definitions:
       meta:
         $ref: '#/definitions/go-lang_internal_model.ListUsersMeta'
     type: object
+  go-lang_internal_model.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  go-lang_internal_model.LoginResponse:
+    properties:
+      accessToken:
+        type: string
+      expiresAt:
+        type: string
+      expiresIn:
+        type: integer
+      tokenType:
+        type: string
+      user:
+        $ref: '#/definitions/go-lang_internal_model.User'
+    type: object
   go-lang_internal_model.UpdateUserRequest:
     properties:
       email:
@@ -71,6 +93,41 @@ info:
   title: Go API Starter
   version: "1.0"
 paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user with email and password, returns a JWT access
+        token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/go-lang_internal_model.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+      summary: Login
+      tags:
+      - auth
   /health:
     get:
       description: Confirms that the application is running
@@ -88,6 +145,25 @@ paths:
       summary: Health check
       tags:
       - health
+  /me:
+    get:
+      description: Returns the user behind a valid bearer token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Current user
+      tags:
+      - auth
   /users:
     get:
       description: Lists all users
