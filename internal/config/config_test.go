@@ -158,6 +158,7 @@ func TestLoadRejectsNonPositiveShutdownTimeout(t *testing.T) {
 func TestValidateAcceptsLongSecret(t *testing.T) {
 	cfg := Config{
 		AccessTokenTTL: time.Minute,
+		RefreshTokenTTL: 24 * time.Hour,
 		BcryptCost:     10,
 		JWTSecret:      "a-long-enough-secret-of-at-least-32-bytes",
 	}
@@ -169,6 +170,7 @@ func TestValidateAcceptsLongSecret(t *testing.T) {
 func TestValidateRejectsShortSecret(t *testing.T) {
 	cfg := Config{
 		AccessTokenTTL: time.Minute,
+		RefreshTokenTTL: 24 * time.Hour,
 		BcryptCost:     10,
 		JWTSecret:      "short",
 	}
@@ -180,6 +182,7 @@ func TestValidateRejectsShortSecret(t *testing.T) {
 func TestValidateRejectsBadBcryptCost(t *testing.T) {
 	cfg := Config{
 		AccessTokenTTL: time.Minute,
+		RefreshTokenTTL: 24 * time.Hour,
 		BcryptCost:     2,
 		JWTSecret:      "a-long-enough-secret-of-at-least-32-bytes",
 	}

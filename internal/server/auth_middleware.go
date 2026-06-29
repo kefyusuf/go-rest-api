@@ -12,7 +12,7 @@ import (
 
 const userIDCtxKey ctxKey = 100
 
-func RequireAuth(issuer *auth.TokenIssuer) func(http.Handler) http.Handler {
+func RequireAuth(issuer *auth.TokenIssuer, blacklist *auth.Blacklist) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			raw := r.Header.Get("Authorization")
@@ -27,8 +27,19 @@ func RequireAuth(issuer *auth.TokenIssuer) func(http.Handler) http.Handler {
 				return
 			}
 
-			claims, err := issuer.Parse(strings.TrimSpace(parts[1]))
+			token := strings.TrimSpace(parts[1])
+			claims, err := issuer.Parse(token)
 			if err != nil {
+				unauthorized(w, "missing or invalid bearer token")
+				return
+			}
+
+			_, jti, err := issuer.RawClaims(token)
+			if err != nil {
+				unauthorized(w, "missing or invalid bearer token")
+				return
+			}
+			if blacklist != nil && blacklist.IsRevoked(jti) {
 				unauthorized(w, "missing or invalid bearer token")
 				return
 			}

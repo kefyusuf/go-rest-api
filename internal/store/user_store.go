@@ -16,6 +16,7 @@ type UserStore interface {
 	GetByEmail(email string) (model.User, error)
 	Create(input model.CreateUserRequest) (model.User, error)
 	Update(id int, input model.UpdateUserRequest) (model.User, error)
+	UpdatePassword(id int, passwordHash string) error
 	Delete(id int) error
 }
 
@@ -121,5 +122,18 @@ func (s *MemoryUserStore) Delete(id int) error {
 		}
 	}
 
+	return ErrUserNotFound
+}
+
+func (s *MemoryUserStore) UpdatePassword(id int, passwordHash string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, user := range s.users {
+		if user.ID == id {
+			s.users[i].PasswordHash = passwordHash
+			return nil
+		}
+	}
 	return ErrUserNotFound
 }
