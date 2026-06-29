@@ -112,7 +112,14 @@ func main() {
 	}
 	defer authLimiterClose()
 
-	idempStore := idempotency.NewMemoryStore(cfg.IdempotencyTTL)
+	idempStore, idempStoreClose, err := buildIdempotencyStore(cfg, logger)
+	if err != nil {
+		logger.Error("failed to build idempotency store", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if idempStoreClose != nil {
+		defer idempStoreClose()
+	}
 
 	outbox := events.NewOutbox()
 	var publisher events.Publisher
@@ -330,4 +337,30 @@ func buildBlacklist(cfg config.Config, logger *slog.Logger) (auth.Blacklist, fun
 	logger.Info("redis-backed token blacklist enabled", slog.String("addr", opts.Addr))
 	bl := auth.NewRedisBlacklist(client)
 	return bl, func() { _ = client.Close() }, nil
+}
+
+// buildIdempotencyStore returns the in-memory store when REDIS_URL is
+// empty, and a Redis-backed store when it is set. The Redis
+// implementation does not own its client; the closer here closes
+// the client.
+func buildIdempotencyStore(cfg config.Config, logger *slog.Logger) (idempotency.Store, func(), error) {
+	if cfg.RedisURL == "" {
+		return idempotency.NewMemoryStore(cfg.IdempotencyTTL), func() {}, nil
+	}
+	opts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid REDIS_URL for idempotency: %w", err)
+	}
+	client := redis.NewClient(opts)
+	pingCtx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	if err := client.Ping(pingCtx).Err(); err != nil {
+		logger.Warn("REDIS_URL set but redis is unreachable, using in-memory idempotency store",
+			slog.String("error", err.Error()))
+		_ = client.Close()
+		return idempotency.NewMemoryStore(cfg.IdempotencyTTL), func() {}, nil
+	}
+	logger.Info("redis-backed idempotency store enabled", slog.String("addr", opts.Addr))
+	store := idempotency.NewRedisStore(client, cfg.IdempotencyTTL)
+	return store, func() { _ = client.Close() }, nil
 }
