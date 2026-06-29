@@ -3,13 +3,11 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"os"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-func OpenPostgres() (*sql.DB, error) {
-	databaseURL := os.Getenv("DATABASE_URL")
+func OpenPostgres(databaseURL string) (*sql.DB, error) {
 	if databaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL is required")
 	}

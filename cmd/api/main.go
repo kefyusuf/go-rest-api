@@ -1,17 +1,18 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
 	_ "go-lang/docs"
+	"go-lang/internal/config"
 	"go-lang/internal/database"
 	"go-lang/internal/server"
 	"go-lang/internal/store"
 )
 
-//go:generate C:/Users/yukonit/go/bin/swag init -g main.go -d .,../../internal/handler,../../internal/model -o ../../docs
+//go:generate swag init -g main.go -d .,../../internal/handler,../../internal/model -o ../../docs
 
 // @title Go API Starter
 // @version 1.0
@@ -19,35 +20,40 @@ import (
 // @host localhost:8080
 // @BasePath /
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Error("failed to load config", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 
-	userStore, cleanup, err := buildUserStore()
+	userStore, cleanup, err := buildUserStore(cfg, logger)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("failed to build user store", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 	defer cleanup()
 
-	addr := ":" + port
-	app := server.New(userStore)
+	addr := ":" + cfg.Port
+	app := server.New(userStore, logger)
 
-	log.Printf("server starting on %s", addr)
+	logger.Info("server starting", slog.String("addr", addr))
 
 	if err := http.ListenAndServe(addr, app); err != nil {
-		log.Fatal(err)
+		logger.Error("server stopped", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 }
 
-func buildUserStore() (store.UserStore, func(), error) {
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		log.Println("DATABASE_URL not set, using in-memory user store")
+func buildUserStore(cfg config.Config, logger *slog.Logger) (store.UserStore, func(), error) {
+	if cfg.DatabaseURL == "" {
+		logger.Warn("DATABASE_URL not set, using in-memory user store")
 		return store.NewMemoryUserStore(), func() {}, nil
 	}
 
-	db, err := database.OpenPostgres()
+	db, err := database.OpenPostgres(cfg.DatabaseURL)
 	if err != nil {
 		return nil, nil, err
 	}
