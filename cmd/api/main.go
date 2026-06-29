@@ -14,6 +14,7 @@ import (
 	cacheimpl "go-lang/internal/cache"
 	"go-lang/internal/config"
 	"go-lang/internal/database"
+	"go-lang/internal/events"
 	"go-lang/internal/idempotency"
 	"go-lang/internal/jobs"
 	"go-lang/internal/observability"
@@ -85,6 +86,13 @@ func main() {
 
 	idempStore := idempotency.NewMemoryStore(cfg.IdempotencyTTL)
 
+	outbox := events.NewOutbox()
+	publisher := events.NewLoggingPublisher(logger)
+	dispatcher := events.NewDispatcher(outbox, publisher, logger)
+	dispatcherCtx, cancelDispatcher := context.WithCancel(context.Background())
+	defer cancelDispatcher()
+	go dispatcher.Run(dispatcherCtx)
+
 	addr := ":" + cfg.Port
 	app := server.New(cachedStore, logger, server.Options{
 		MaxBodyBytes:    cfg.MaxBodyBytes,
@@ -98,6 +106,7 @@ func main() {
 		GlobalLimiter:   globalLimiter,
 		AuthLimiter:     authLimiter,
 		IdempotencyStore: idempStore,
+		Outbox:           outbox,
 		CORS: server.CORSConfig{
 			AllowedOrigins: cfg.CORSAllowedOrigins,
 		},
@@ -156,6 +165,9 @@ func main() {
 
 	cancelJobs()
 	jobReg.Stop()
+	cancelDispatcher()
+	_ = outbox.Close()
+	_ = publisher.Close()
 }
 
 func buildUserStore(cfg config.Config, logger *slog.Logger) (store.UserStore, func(), observability.Pinger, error) {

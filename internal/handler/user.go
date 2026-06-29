@@ -8,20 +8,24 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"go-lang/internal/auth"
+	"go-lang/internal/events"
 	"go-lang/internal/model"
 	"go-lang/internal/response"
 	"go-lang/internal/store"
+
 )
 
 type UserHandler struct {
 	store      store.UserStore
 	bcryptCost int
+	outbox     *events.Outbox
 }
 
-func NewUserHandler(store store.UserStore, bcryptCost int) UserHandler {
-	return UserHandler{store: store, bcryptCost: bcryptCost}
+func NewUserHandler(store store.UserStore, bcryptCost int, outbox *events.Outbox) UserHandler {
+	return UserHandler{store: store, bcryptCost: bcryptCost, outbox: outbox}
 }
 
 // ListUsers godoc
@@ -100,6 +104,21 @@ func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		handleUserStoreError(w, err)
 		return
+	}
+
+	if h.outbox != nil {
+		payload, _ := json.Marshal(map[string]any{
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+		})
+		_ = h.outbox.Enqueue(r.Context(), events.Event{
+			Type:       "user.created",
+			Topic:      "users",
+			Key:        strconv.Itoa(user.ID),
+			Payload:    payload,
+			OccurredAt: time.Now(),
+		})
 	}
 
 	user.PasswordHash = ""
