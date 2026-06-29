@@ -1393,6 +1393,30 @@ Redis-backed store so retries across instances land on the same
 cache. Until then, an instance restart drops the cache and the
 first request after restart always runs.
 
+## Background jobs
+
+`internal/jobs` is a small in-process background-job system. It
+ships with:
+
+- A `Queue` interface and an in-memory implementation backed by a
+  slice and a condition variable. The in-memory queue honours
+  per-job `RunAfter` for retry backoff.
+- A `Registry` that owns a worker pool. Each job runs with a
+  30s timeout; failed jobs are retried with exponential backoff
+  (1s, 2s, 4s, ... capped at 1 minute) up to `MaxRetries` times
+  (default 2). After that the job lands in the dead-letter list.
+- A `DeadLetter` interface and an in-memory implementation. The
+  list is process-local; an instance restart drops it.
+
+Production wiring would replace the in-memory queue with RabbitMQ
+or another broker and the dead-letter list with a shared store.
+Both keep the same `Handler` interface, so handlers do not need
+to change.
+
+The starter ships a single mock job, `welcome_email`, that simply
+logs that it ran. Real handlers can be added by calling
+`jobReg.Register("type", jobs.HandlerFunc(...))` in `main.go`.
+
 ## Caching
 
 `GET /users/{id}` and `GET /me` are served through a read-through
