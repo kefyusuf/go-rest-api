@@ -20,6 +20,8 @@ var (
 	ErrNotFound = errors.New("idempotency key not found")
 )
 
+const Header = "Idempotency-Key"
+
 type Entry struct {
 	Status      int
 	Body        []byte
