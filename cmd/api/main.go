@@ -76,6 +76,22 @@ func main() {
 	if cacheClose != nil {
 		defer cacheClose()
 	}
+
+	blacklist, blacklistClose, err := buildBlacklist(cfg, logger)
+	if err != nil {
+		logger.Error("failed to build blacklist", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if blacklistClose != nil {
+		defer blacklistClose()
+	}
+	if err != nil {
+		logger.Error("failed to build cache", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if cacheClose != nil {
+		defer cacheClose()
+	}
 	userCache := cacheimpl.NewUserCache(cacheImpl, cfg.UserCacheTTL)
 	cachedStore := store.NewCachedUserStore(userStore, userCache, cfg.UserCacheTTL)
 
@@ -131,7 +147,7 @@ func main() {
 		MaxBodyBytes:    cfg.MaxBodyBytes,
 		TokenIssuer:     issuer,
 		RefreshIssuer:   refreshIssuer,
-		Blacklist:       auth.NewBlacklist(),
+		Blacklist:       blacklist,
 		BcryptCost:      cfg.BcryptCost,
 		Metrics:         metrics,
 		HealthProbes:    probes,
@@ -288,4 +304,30 @@ func buildRateLimiter(name string, rate, burst float64, cfg config.Config, logge
 	// handle — we use the name as a sub-namespace).
 	rl := ratelimit.NewRedis(client, rate, burst)
 	return rl, func() { _ = rl.Close() }, nil
+}
+
+// buildBlacklist returns the in-memory blacklist when REDIS_URL is
+// empty, and a Redis-backed blacklist when it is set. The Redis
+// implementation does not own its client; the closer here closes
+// the client.
+func buildBlacklist(cfg config.Config, logger *slog.Logger) (auth.Blacklist, func(), error) {
+	if cfg.RedisURL == "" {
+		return auth.NewBlacklist(), func() {}, nil
+	}
+	opts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid REDIS_URL for blacklist: %w", err)
+	}
+	client := redis.NewClient(opts)
+	pingCtx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	if err := client.Ping(pingCtx).Err(); err != nil {
+		logger.Warn("REDIS_URL set but redis is unreachable, using in-memory blacklist",
+			slog.String("error", err.Error()))
+		_ = client.Close()
+		return auth.NewBlacklist(), func() {}, nil
+	}
+	logger.Info("redis-backed token blacklist enabled", slog.String("addr", opts.Addr))
+	bl := auth.NewRedisBlacklist(client)
+	return bl, func() { _ = client.Close() }, nil
 }

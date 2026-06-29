@@ -16,7 +16,7 @@ type AuthHandler struct {
 	store          store.UserStore
 	issuer         *auth.TokenIssuer
 	refreshIssuer  *auth.TokenIssuer
-	blacklist      *auth.Blacklist
+	blacklist      auth.Blacklist
 	bcryptCost     int
 	resetTokens    *resetTokenStore
 	now            func() time.Time
@@ -29,7 +29,7 @@ type AuthHandlerOptions struct {
 	ResetTokenTTL time.Duration
 }
 
-func NewAuthHandler(userStore store.UserStore, issuer *auth.TokenIssuer, refreshIssuer *auth.TokenIssuer, blacklist *auth.Blacklist, opts AuthHandlerOptions) AuthHandler {
+func NewAuthHandler(userStore store.UserStore, issuer *auth.TokenIssuer, refreshIssuer *auth.TokenIssuer, blacklist auth.Blacklist, opts AuthHandlerOptions) AuthHandler {
 	if opts.ResetTokenTTL <= 0 {
 		opts.ResetTokenTTL = time.Hour
 	}
