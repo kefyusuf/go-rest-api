@@ -6,6 +6,7 @@ import (
 
 	httpSwagger "github.com/swaggo/http-swagger"
 
+	"go-lang/internal/auth"
 	"go-lang/internal/handler"
 	"go-lang/internal/model"
 	"go-lang/internal/response"
@@ -14,6 +15,8 @@ import (
 
 type Options struct {
 	MaxBodyBytes int64
+	TokenIssuer  *auth.TokenIssuer
+	BcryptCost   int
 }
 
 func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Handler {
@@ -23,7 +26,22 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 
 	mux := http.NewServeMux()
 	healthHandler := handler.NewHealthHandler()
-	userHandler := handler.NewUserHandler(userStore)
+	userHandler := handler.NewUserHandler(userStore, opts.BcryptCost)
+	meHandler := handler.NewMeHandler(userStore)
+
+	var authHandler handler.AuthHandler
+	if opts.TokenIssuer != nil {
+		authHandler = handler.NewAuthHandler(userStore, opts.TokenIssuer)
+		mux.HandleFunc("/auth/login", authHandler.Login)
+		mux.Handle("/me", RequireAuth(opts.TokenIssuer)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			userID, ok := UserIDFromContext(r.Context())
+			if !ok {
+				response.Error(w, http.StatusUnauthorized, model.ErrorCodeUnauthorized, "missing or invalid bearer token", nil)
+				return
+			}
+			meHandler.Me(w, r, userID)
+		})))
+	}
 
 	mux.HandleFunc("/health", healthHandler.Check)
 	mux.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
