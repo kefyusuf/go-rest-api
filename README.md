@@ -1033,7 +1033,8 @@ sh scripts/test-db-down.sh
 
 ### GET /health
 
-Confirms that the application is running.
+Confirms that the application is running. Kept for backwards
+compatibility; prefer `/health/live` for new probes.
 
 Example response:
 
@@ -1042,6 +1043,38 @@ Example response:
   "message": "API is running",
   "status": "ok"
 }
+```
+
+### GET /health/live
+
+Liveness probe. Returns `200 OK` if the process is up. It does not
+depend on any external service, so a transient database blip will
+not restart the pod.
+
+### GET /health/ready
+
+Readiness probe. Pings the database with a short timeout. Returns
+`200 OK` when the database is reachable, `503 Service Unavailable`
+otherwise. The in-memory store path reports `ok` and skips the
+database check.
+
+### GET /metrics
+
+Prometheus exposition. The registry includes:
+
+- `http_requests_total{method,path,status}` (counter)
+- `http_request_duration_seconds{method,path,status}` (histogram)
+- `http_in_flight_requests` (gauge)
+- `go_*` and `process_*` (Go runtime and process collectors)
+
+All custom metrics are labelled with `service` and `environment`
+const labels so multiple environments can share a Prometheus
+instance.
+
+Example:
+
+```bash
+curl http://localhost:8080/metrics
 ```
 
 ### GET /users
