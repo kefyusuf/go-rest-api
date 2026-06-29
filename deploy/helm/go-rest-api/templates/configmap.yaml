@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "go-rest-api.fullname" . }}-config
+  labels:
+    {{- include "go-rest-api.labels" . | nindent 4 }}
+data:
+  APP_ENV: {{ .Values.config.appEnv | quote }}
+  PORT: {{ .Values.config.port | quote }}
+  READ_HEADER_TIMEOUT: {{ .Values.server.readHeaderTimeout | quote }}
+  READ_TIMEOUT: {{ .Values.server.readTimeout | quote }}
+  WRITE_TIMEOUT: {{ .Values.server.writeTimeout | quote }}
+  IDLE_TIMEOUT: {{ .Values.server.idleTimeout | quote }}
+  MAX_HEADER_BYTES: {{ .Values.server.maxHeaderBytes | quote }}
+  MAX_BODY_BYTES: {{ .Values.server.maxBodyBytes | quote }}
+  SHUTDOWN_TIMEOUT: {{ .Values.server.shutdownTimeout | quote }}
+  RATE_LIMIT_PER_SECOND: {{ .Values.rateLimit.globalPerSecond | quote }}
+  RATE_LIMIT_BURST: {{ .Values.rateLimit.globalBurst | quote }}
+  AUTH_RATE_LIMIT_PER_SECOND: {{ .Values.rateLimit.authPerSecond | quote }}
+  AUTH_RATE_LIMIT_BURST: {{ .Values.rateLimit.authBurst | quote }}
+  USER_CACHE_TTL: {{ .Values.cache.userTTL | quote }}
+  IDEMPOTENCY_TTL: {{ .Values.cache.idempotencyTTL | quote }}
+  BCRYPT_COST: {{ .Values.auth.bcryptCost | quote }}
+  ACCESS_TOKEN_TTL: {{ .Values.auth.accessTokenTTL | quote }}
+  REFRESH_TOKEN_TTL: {{ .Values.auth.refreshTokenTTL | quote }}
