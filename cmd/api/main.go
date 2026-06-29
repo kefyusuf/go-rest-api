@@ -168,7 +168,14 @@ func main() {
 		},
 	})
 
-	jobQueue := jobs.NewMemoryQueue()
+	jobQueue, jobQueueClose, err := buildJobQueue(cfg, logger)
+	if err != nil {
+		logger.Error("failed to build job queue", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if jobQueueClose != nil {
+		defer jobQueueClose()
+	}
 	jobDead := jobs.NewMemoryDeadLetter()
 	jobReg := jobs.NewRegistry(jobQueue, jobDead, logger)
 	jobReg.Register("welcome_email", jobs.HandlerFunc(func(_ context.Context, _ jobs.Job) error {
@@ -337,6 +344,37 @@ func buildBlacklist(cfg config.Config, logger *slog.Logger) (auth.Blacklist, fun
 	logger.Info("redis-backed token blacklist enabled", slog.String("addr", opts.Addr))
 	bl := auth.NewRedisBlacklist(client)
 	return bl, func() { _ = client.Close() }, nil
+}
+
+// buildJobQueue returns the in-memory queue when REDIS_URL is empty,
+// and a Redis-Streams-backed queue when it is set. The Streams
+// implementation gives the queue durability (jobs survive a process
+// restart) and a natural multi-consumer fan-out via consumer
+// groups. The closer here closes the underlying Redis client.
+func buildJobQueue(cfg config.Config, logger *slog.Logger) (jobs.Queue, func(), error) {
+	if cfg.RedisURL == "" {
+		return jobs.NewMemoryQueue(), func() {}, nil
+	}
+	opts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid REDIS_URL for job queue: %w", err)
+	}
+	client := redis.NewClient(opts)
+	pingCtx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	if err := client.Ping(pingCtx).Err(); err != nil {
+		logger.Warn("REDIS_URL set but redis is unreachable, using in-memory job queue",
+			slog.String("error", err.Error()))
+		_ = client.Close()
+		return jobs.NewMemoryQueue(), func() {}, nil
+	}
+	logger.Info("redis-backed job queue enabled", slog.String("addr", opts.Addr))
+	q, err := jobs.NewRedisQueue(client, jobs.RedisConfig{})
+	if err != nil {
+		_ = client.Close()
+		return nil, nil, fmt.Errorf("build redis queue: %w", err)
+	}
+	return q, func() { _ = client.Close() }, nil
 }
 
 // buildIdempotencyStore returns the in-memory store when REDIS_URL is
