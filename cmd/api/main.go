@@ -11,11 +11,15 @@ import (
 
 	_ "go-lang/docs"
 	"go-lang/internal/auth"
+	cacheimpl "go-lang/internal/cache"
 	"go-lang/internal/config"
 	"go-lang/internal/database"
 	"go-lang/internal/observability"
 	"go-lang/internal/server"
 	"go-lang/internal/store"
+	"fmt"
+
+	"github.com/redis/go-redis/v9"
 )
 
 //go:generate swag init -g main.go -d .,../../internal/handler,../../internal/model -o ../../docs
@@ -59,11 +63,22 @@ func main() {
 	}
 	defer cleanup()
 
+	cacheImpl, cacheClose, err := buildCache(cfg, logger)
+	if err != nil {
+		logger.Error("failed to build cache", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if cacheClose != nil {
+		defer cacheClose()
+	}
+	userCache := cacheimpl.NewUserCache(cacheImpl, cfg.UserCacheTTL)
+	cachedStore := store.NewCachedUserStore(userStore, userCache, cfg.UserCacheTTL)
+
 	metrics := observability.NewMetrics("go-rest-api", cfg.Environment)
 	probes := observability.NewHealthProbes("go-rest-api", "1.0.0", cfg.Environment)
 
 	addr := ":" + cfg.Port
-	app := server.New(userStore, logger, server.Options{
+	app := server.New(cachedStore, logger, server.Options{
 		MaxBodyBytes:  cfg.MaxBodyBytes,
 		TokenIssuer:   issuer,
 		RefreshIssuer: refreshIssuer,
@@ -146,4 +161,17 @@ type pingerDB interface {
 
 func (p *sqlPinger) PingContext(ctx context.Context) error {
 	return p.db.PingContext(ctx)
+}
+
+func buildCache(cfg config.Config, logger *slog.Logger) (cacheimpl.Cache, func(), error) {
+	if cfg.RedisURL == "" {
+		logger.Warn("REDIS_URL not set, using in-memory cache (per-instance, lost on restart)")
+		return cacheimpl.NewMemoryCache(), nil, nil
+	}
+	opts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid REDIS_URL: %w", err)
+	}
+	rc := cacheimpl.NewRedisCache(opts.Addr, opts.Password, opts.DB)
+	return rc, func() { _ = rc.Close() }, nil
 }
