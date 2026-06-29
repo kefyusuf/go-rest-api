@@ -1,0 +1,83 @@
+image:
+  repository: ghcr.io/your-org/go-rest-api
+  tag: ""           # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  host: api.example.com
+  tls:
+    enabled: true
+    secretName: go-rest-api-tls
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+serviceAccount:
+  create: true
+  name: go-rest-api
+
+config:
+  appEnv: production
+  port: 8080
+  logLevel: info
+
+secrets:
+  jwtSecret: "change-me-to-a-long-random-secret-of-at-least-32-bytes"
+  databaseURL: "postgres://postgres:postgres@postgres:5432/go_lang?sslmode=disable"
+  redisURL: "redis://redis:6379/0"
+
+rateLimit:
+  globalPerSecond: 20
+  globalBurst: 40
+  authPerSecond: 5
+  authBurst: 10
+
+cache:
+  userTTL: 5m
+  idempotencyTTL: 24h
+
+server:
+  readHeaderTimeout: 5s
+  readTimeout: 15s
+  writeTimeout: 15s
+  idleTimeout: 60s
+  maxHeaderBytes: 1048576
+  maxBodyBytes: 1048576
+  shutdownTimeout: 30s
+
+auth:
+  bcryptCost: 10
+  accessTokenTTL: 15m
+  refreshTokenTTL: 168h
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+
+networkPolicy:
+  enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

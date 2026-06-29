@@ -1,0 +1,16 @@
+apiVersion: v2
+name: go-rest-api
+description: A clean beginner-friendly Go REST API starter
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - go
+  - rest
+  - api
+  - starter
+maintainers:
+  - name: go-rest-api maintainers
+home: https://github.com/your-org/go-rest-api
+sources:
+  - https://github.com/your-org/go-rest-api

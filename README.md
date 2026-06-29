@@ -806,6 +806,47 @@ compiles the binary with `-trimpath` and `-ldflags="-s -w"` for
 smaller images; the final stage is a non-root `alpine:3.22` with
 the binary and a `HEALTHCHECK` that hits `/health/live`.
 
+## Kubernetes and cloud
+
+`deploy/k8s/` carries a Kustomize bundle:
+
+```bash
+kubectl apply -k deploy/k8s
+```
+
+It creates a Namespace, a ConfigMap with the non-secret runtime
+config, a Secret with placeholders for `JWTSecret`, `DATABASE_URL`,
+and `REDIS_URL`, a Deployment (2 replicas, non-root, hardened
+security context, startup/liveness/readiness probes against
+`/health/live` and `/health/ready`), a Service, a
+HorizontalPodAutoscaler (2-10 replicas on CPU and memory), an
+Ingress with cert-manager, a NetworkPolicy (default-deny with
+allow-rules for the ingress controller and the data pods plus
+DNS), a PodDisruptionBudget, and a ServiceMonitor for Prometheus.
+See `deploy/k8s/README.md` for the per-file inventory and the
+override pattern.
+
+`deploy/helm/go-rest-api/` carries the same set of resources as a
+minimal Helm chart. Render the chart with `helm template` and apply
+the output, or install directly with `helm install`. Values mirror
+the Kustomize fields 1:1; the chart template is intentionally
+small so it is easy to read and override.
+
+Production checklist:
+
+- Replace the placeholder `JWTSecret` in the secret with
+  `openssl rand -base64 48`
+- Replace the placeholder `DATABASE_URL` and `REDIS_URL` with
+  real connection strings, including `?sslmode=require` for
+  Postgres and `rediss://` for Redis when TLS is in use
+- Pin the image tag in `kustomization.yaml` to a release version;
+  the default `v0.1.0` is a placeholder
+- Apply the NetworkPolicy before exposing the service publicly;
+  until then the cluster default (allow-all) applies
+- Run a Postgres operator (e.g. CloudNativePG) and a Redis operator
+  (e.g. Redis Operator) so the data pods match the labels the
+  NetworkPolicy selects
+
 ## Branch Lifecycle
 
 The `Status` field in the Learning Layers table describes the maturity of

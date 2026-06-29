@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: go-rest-api
+
+resources:
+  - 00-namespace.yaml
+  - 10-configmap.yaml
+  - 11-secret.yaml
+  - 20-deployment.yaml
+  - 21-service.yaml
+  - 30-ingress.yaml
+  - 40-poddisruptionbudget.yaml
+  - 50-servicemonitor.yaml
+
+commonLabels:
+  app.kubernetes.io/name: go-rest-api
+  app.kubernetes.io/part-of: go-rest-api
+
+images:
+  - name: go-rest-api
+    newName: ghcr.io/your-org/go-rest-api
+    newTag: v0.1.0
