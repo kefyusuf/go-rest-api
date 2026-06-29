@@ -13,6 +13,7 @@ import (
 	"go-lang/internal/auth"
 	"go-lang/internal/config"
 	"go-lang/internal/database"
+	"go-lang/internal/observability"
 	"go-lang/internal/server"
 	"go-lang/internal/store"
 )
@@ -51,12 +52,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	userStore, cleanup, err := buildUserStore(cfg, logger)
+	userStore, cleanup, pinger, err := buildUserStore(cfg, logger)
 	if err != nil {
 		logger.Error("failed to build user store", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 	defer cleanup()
+
+	metrics := observability.NewMetrics("go-rest-api", cfg.Environment)
+	probes := observability.NewHealthProbes("go-rest-api", "1.0.0", cfg.Environment)
 
 	addr := ":" + cfg.Port
 	app := server.New(userStore, logger, server.Options{
@@ -65,6 +69,9 @@ func main() {
 		RefreshIssuer: refreshIssuer,
 		Blacklist:     auth.NewBlacklist(),
 		BcryptCost:    cfg.BcryptCost,
+		Metrics:       metrics,
+		HealthProbes:  probes,
+		DBPinger:      pinger,
 	})
 
 	srv := &http.Server{
@@ -107,23 +114,36 @@ func main() {
 	}
 }
 
-func buildUserStore(cfg config.Config, logger *slog.Logger) (store.UserStore, func(), error) {
+func buildUserStore(cfg config.Config, logger *slog.Logger) (store.UserStore, func(), observability.Pinger, error) {
 	if cfg.DatabaseURL == "" {
 		logger.Warn("DATABASE_URL not set, using in-memory user store")
-		return store.NewMemoryUserStore(), func() {}, nil
+		return store.NewMemoryUserStore(), func() {}, nil, nil
 	}
 
 	db, err := database.OpenPostgres(cfg.DatabaseURL)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if err := database.RunMigrations(db); err != nil {
 		db.Close()
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
+	pinger := &sqlPinger{db: db}
 	return store.NewPostgresUserStore(db), func() {
-		db.Close()
-	}, nil
+			db.Close()
+		}, pinger, nil
+}
+
+type sqlPinger struct {
+	db pingerDB
+}
+
+type pingerDB interface {
+	PingContext(ctx context.Context) error
+}
+
+func (p *sqlPinger) PingContext(ctx context.Context) error {
+	return p.db.PingContext(ctx)
 }
