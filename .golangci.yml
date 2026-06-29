@@ -1,0 +1,17 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - gocheckcompilerdirectives
+    - ineffassign
+    - misspell
+    - nakedret
+    - nilerr
+    - prealloc
+    - staticcheck
+
+run:
+  timeout: 5m
+  tests: true

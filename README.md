@@ -770,6 +770,42 @@ The goal is to show the basic HTTP flow with minimum dependencies, so the
 `net/http` line is preserved. More opinionated router or framework
 choices can be evaluated in separate branches.
 
+## CI/CD and delivery
+
+`.github/workflows/` carries three pipelines:
+
+- `ci.yml` runs on every push to `main` and on every pull request.
+  Three jobs run in sequence: `test` (go build, go vet, `go test -race`
+  with a Postgres service container, coverage summary), `lint`
+  (golangci-lint with the curated ruleset in `.golangci.yml`), and
+  `build` (final binary, uploaded as a build artifact).
+- `release.yml` runs on `v*.*.*` tags and on manual dispatch. It
+  builds a multi-stage Docker image and pushes it to GHCR with the
+  tag as the version and `latest` for dispatch from `main`.
+- `dependabot-auto-merge.yml` auto-merges Dependabot PRs for
+  patch and minor updates so the project stays current without
+  manual review on routine bumps.
+
+Dependabot itself is configured in `.github/dependabot.yml` to scan
+`go.mod` and GitHub Actions weekly.
+
+The `Makefile` mirrors the CI surface for local use:
+
+```bash
+make test       # go test ./...
+make test-race  # go test -race ./...
+make vet        # go vet ./...
+make lint       # golangci-lint run
+make build      # compile to bin/api
+make cover      # coverage summary
+make swagger    # regenerate docs/
+```
+
+The `Dockerfile` is a multi-stage build. The `builder` stage
+compiles the binary with `-trimpath` and `-ldflags="-s -w"` for
+smaller images; the final stage is a non-root `alpine:3.22` with
+the binary and a `HEALTHCHECK` that hits `/health/live`.
+
 ## Branch Lifecycle
 
 The `Status` field in the Learning Layers table describes the maturity of
