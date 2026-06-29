@@ -1085,9 +1085,46 @@ Example request body:
 }
 ```
 
+### POST /auth/register
+
+Creates a new user account and returns a JWT access token and a refresh
+token. The password is hashed with bcrypt before it is stored; it is
+never returned in any response.
+
+Example request body:
+
+```json
+{
+  "name": "Ada Lovelace",
+  "email": "ada@example.com",
+  "password": "correct-horse-battery-staple"
+}
+```
+
+Successful response (`201 Created`):
+
+```json
+{
+  "accessToken": "<jwt>",
+  "refreshToken": "<jwt>",
+  "tokenType": "Bearer",
+  "expiresIn": 900,
+  "expiresAt": "2026-06-29T13:00:00Z",
+  "refreshExpiresAt": "2026-07-06T12:00:00Z",
+  "user": {
+    "id": 1,
+    "name": "Ada Lovelace",
+    "email": "ada@example.com"
+  }
+}
+```
+
+If the email is already registered, the response is `409 Conflict`.
+
 ### POST /auth/login
 
-Exchanges email and password for a short-lived JWT bearer token.
+Exchanges email and password for a JWT access token and a refresh
+token.
 
 Example request body:
 
@@ -1103,9 +1140,11 @@ Successful response (`200 OK`):
 ```json
 {
   "accessToken": "<jwt>",
+  "refreshToken": "<jwt>",
   "tokenType": "Bearer",
   "expiresIn": 900,
   "expiresAt": "2026-06-29T13:00:00Z",
+  "refreshExpiresAt": "2026-07-06T12:00:00Z",
   "user": {
     "id": 1,
     "name": "Ada Lovelace",
@@ -1118,6 +1157,75 @@ Invalid credentials return `401 Unauthorized` with a generic
 `UNAUTHORIZED` code and the message `invalid email or password`. The
 message is the same whether the email is unknown or the password is
 wrong, so it does not leak which side failed.
+
+### POST /auth/logout
+
+Revokes the bearer token used in this request. After logout, the same
+token cannot be used to call `/me` or any other protected endpoint.
+
+Example request:
+
+```bash
+curl -X POST http://localhost:8080/auth/logout \
+  -H "Authorization: Bearer <access-token>"
+```
+
+Successful response: `204 No Content`. The token blacklist lives in
+process memory, so it is cleared on restart. A production deployment
+would move it to Redis or another shared store (`layer/06`).
+
+### POST /auth/refresh
+
+Trades a valid refresh token for a new access token and a new refresh
+token. The old refresh token is single-use and is rejected on replay.
+
+Example request body:
+
+```json
+{
+  "refreshToken": "<refresh-jwt>"
+}
+```
+
+Successful response: `200 OK` with the same `LoginResponse` shape as
+`/auth/login`.
+
+### POST /auth/forgot-password
+
+Starts the password reset flow. Always returns `202 Accepted` whether
+or not the email is registered, to avoid leaking which emails exist on
+the platform.
+
+In this in-memory starter the response also includes the reset token
+directly so you can complete the flow locally:
+
+```json
+{
+  "accepted": true,
+  "token": "<reset-token>",
+  "expiresAt": "2026-06-29T14:00:00Z",
+  "resetUrl": "/auth/reset-password"
+}
+```
+
+A production deployment would email the token to the user and never
+include it in the response.
+
+### POST /auth/reset-password
+
+Resets a user's password using a valid reset token from the
+`/auth/forgot-password` response.
+
+Example request body:
+
+```json
+{
+  "token": "<reset-token>",
+  "password": "new-correct-horse-battery-staple"
+}
+```
+
+Successful response: `204 No Content`. The reset token is single-use.
 
 ### GET /me
 
@@ -1140,7 +1248,7 @@ Successful response (`200 OK`):
 }
 ```
 
-Missing, malformed, or expired tokens return `401 Unauthorized`.
+Missing, malformed, expired, or revoked tokens return `401 Unauthorized`.
 
 ### PUT /users/{id}
 
@@ -1214,6 +1322,29 @@ Use `curl.exe` if needed.
 curl -X DELETE http://localhost:8080/users/1
 ```
 
+### 5a. Register a new account
+
+```bash
+curl -X POST http://localhost:8080/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Ada Lovelace","email":"ada@example.com","password":"correct-horse-battery-staple"}'
+```
+
+### 5b. Log out
+
+```bash
+curl -X POST http://localhost:8080/auth/logout \
+  -H "Authorization: Bearer <access-token>"
+```
+
+### 5c. Refresh an access token
+
+```bash
+curl -X POST http://localhost:8080/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken":"<refresh-token>"}'
+```
+
 ### 6. Trigger a duplicate email error
 
 ```bash
@@ -1243,6 +1374,7 @@ field-level `details`.
 | `DATABASE_URL` | API application and PostgreSQL integration tests | `postgres://postgres:postgres@postgres:5432/go_lang?sslmode=disable` | PostgreSQL connection URL for the application |
 | `JWTSecret` | API application | at least 32 random bytes | Secret used to sign JWT access tokens. Required. |
 | `ACCESS_TOKEN_TTL` | API application | `15m` | Lifetime of an access token |
+| `REFRESH_TOKEN_TTL` | API application | `168h` | Lifetime of a refresh token |
 | `BcryptCost` | API application | `10` | bcrypt cost factor used when hashing passwords |
 | `APP_ENV` | API application | `development` | Environment name; emitted as the JWT `iss` claim |
 | `READ_HEADER_TIMEOUT` | API application | `5s` | HTTP read header timeout |

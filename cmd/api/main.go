@@ -39,9 +39,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	issuer, err := auth.NewTokenIssuer(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.Environment)
+	issuer, err := auth.NewTokenIssuer(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.Environment, auth.KindAccess)
 	if err != nil {
 		logger.Error("failed to build token issuer", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+
+	refreshIssuer, err := auth.NewTokenIssuer(cfg.JWTSecret, cfg.RefreshTokenTTL, cfg.Environment, auth.KindRefresh)
+	if err != nil {
+		logger.Error("failed to build refresh token issuer", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
 
@@ -54,9 +60,11 @@ func main() {
 
 	addr := ":" + cfg.Port
 	app := server.New(userStore, logger, server.Options{
-		MaxBodyBytes: cfg.MaxBodyBytes,
-		TokenIssuer:  issuer,
-		BcryptCost:   cfg.BcryptCost,
+		MaxBodyBytes:  cfg.MaxBodyBytes,
+		TokenIssuer:   issuer,
+		RefreshIssuer: refreshIssuer,
+		Blacklist:     auth.NewBlacklist(),
+		BcryptCost:    cfg.BcryptCost,
 	})
 
 	srv := &http.Server{
