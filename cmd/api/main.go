@@ -15,6 +15,7 @@ import (
 	"go-lang/internal/config"
 	"go-lang/internal/database"
 	"go-lang/internal/observability"
+	"go-lang/internal/ratelimit"
 	"go-lang/internal/server"
 	"go-lang/internal/store"
 	"fmt"
@@ -77,6 +78,9 @@ func main() {
 	metrics := observability.NewMetrics("go-rest-api", cfg.Environment)
 	probes := observability.NewHealthProbes("go-rest-api", "1.0.0", cfg.Environment)
 
+	globalLimiter := ratelimit.New(cfg.RateLimitPerSecond, cfg.RateLimitBurst)
+	authLimiter := ratelimit.New(cfg.AuthRateLimitPerSecond, cfg.AuthRateLimitBurst)
+
 	addr := ":" + cfg.Port
 	app := server.New(cachedStore, logger, server.Options{
 		MaxBodyBytes:  cfg.MaxBodyBytes,
@@ -87,6 +91,11 @@ func main() {
 		Metrics:       metrics,
 		HealthProbes:  probes,
 		DBPinger:      pinger,
+		GlobalLimiter: globalLimiter,
+		AuthLimiter:   authLimiter,
+		CORS: server.CORSConfig{
+			AllowedOrigins: cfg.CORSAllowedOrigins,
+		},
 	})
 
 	srv := &http.Server{
