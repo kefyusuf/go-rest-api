@@ -10,6 +10,7 @@ import (
 	"go-lang/internal/auth"
 	"go-lang/internal/handler"
 	"go-lang/internal/model"
+	"go-lang/internal/observability"
 	"go-lang/internal/response"
 	"go-lang/internal/store"
 )
@@ -20,6 +21,9 @@ type Options struct {
 	RefreshIssuer *auth.TokenIssuer
 	Blacklist     *auth.Blacklist
 	BcryptCost    int
+	Metrics       *observability.Metrics
+	HealthProbes  *observability.HealthProbes
+	DBPinger      observability.Pinger
 }
 
 func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Handler {
@@ -31,6 +35,14 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 	healthHandler := handler.NewHealthHandler()
 	userHandler := handler.NewUserHandler(userStore, opts.BcryptCost)
 	meHandler := handler.NewMeHandler(userStore)
+
+	if opts.HealthProbes != nil {
+		mux.HandleFunc("/health/live", opts.HealthProbes.Liveness)
+		mux.HandleFunc("/health/ready", opts.HealthProbes.Readiness(opts.DBPinger))
+	}
+	if opts.Metrics != nil {
+		mux.Handle("/metrics", opts.Metrics.Handler())
+	}
 
 	if opts.TokenIssuer != nil && opts.RefreshIssuer != nil && opts.Blacklist != nil {
 		authHandler := handler.NewAuthHandler(userStore, opts.TokenIssuer, opts.RefreshIssuer, opts.Blacklist, handler.AuthHandlerOptions{
@@ -98,7 +110,9 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 	chain := RequestID(
 		Recovery(logger)(
 			AccessLog(logger)(
-				BodyLimit(opts.MaxBodyBytes)(mux),
+				MetricsMiddleware(opts.Metrics)(
+					BodyLimit(opts.MaxBodyBytes)(mux),
+				),
 			),
 		),
 	)
