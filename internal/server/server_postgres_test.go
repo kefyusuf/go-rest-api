@@ -32,7 +32,7 @@ func TestUsersCRUDFlowWithPostgres(t *testing.T) {
 		t.Fatalf("run migrations failed: %v", err)
 	}
 
-	app := server.New(store.NewPostgresUserStore(db), newTestLogger())
+	app := server.New(store.NewPostgresUserStore(db), newTestLogger(), server.Options{})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
@@ -81,7 +81,7 @@ func TestUsersDuplicateEmailWithPostgresReturnsConflict(t *testing.T) {
 		t.Fatalf("run migrations failed: %v", err)
 	}
 
-	app := server.New(store.NewPostgresUserStore(db), newTestLogger())
+	app := server.New(store.NewPostgresUserStore(db), newTestLogger(), server.Options{})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 

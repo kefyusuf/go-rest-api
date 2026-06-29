@@ -20,16 +20,47 @@ type Config struct {
 	AccessTokenTTL time.Duration
 	BcryptCost     int
 	Environment    string
+
+	ReadHeaderTimeout time.Duration
+	ReadTimeout       time.Duration
+	WriteTimeout      time.Duration
+	IdleTimeout       time.Duration
+	MaxHeaderBytes    int
+
+	MaxBodyBytes int64
+
+	ShutdownTimeout time.Duration
 }
+
+const (
+	defaultPort              = "8080"
+	defaultEnv               = "development"
+	defaultAccessTokenTTL    = 15 * time.Minute
+	defaultBcryptCost        = 10
+	defaultReadHeaderTimeout = 5 * time.Second
+	defaultReadTimeout       = 15 * time.Second
+	defaultWriteTimeout      = 15 * time.Second
+	defaultIdleTimeout       = 60 * time.Second
+	defaultMaxHeaderBytes    = 1 << 20
+	defaultMaxBodyBytes      = 1 << 20
+	defaultShutdownTimeout   = 15 * time.Second
+)
 
 func Load() (Config, error) {
 	cfg := Config{
-		Port:           getenv("PORT", "8080"),
-		DatabaseURL:    os.Getenv("DATABASE_URL"),
-		JWTSecret:      os.Getenv("JWTSecret"),
-		AccessTokenTTL: 15 * time.Minute,
-		BcryptCost:     10,
-		Environment:    getenv("APP_ENV", "development"),
+		Port:             getenv("PORT", defaultPort),
+		DatabaseURL:      os.Getenv("DATABASE_URL"),
+		JWTSecret:        os.Getenv("JWTSecret"),
+		AccessTokenTTL:   defaultAccessTokenTTL,
+		BcryptCost:       defaultBcryptCost,
+		Environment:      getenv("APP_ENV", defaultEnv),
+		ReadHeaderTimeout: defaultReadHeaderTimeout,
+		ReadTimeout:       defaultReadTimeout,
+		WriteTimeout:      defaultWriteTimeout,
+		IdleTimeout:       defaultIdleTimeout,
+		MaxHeaderBytes:    defaultMaxHeaderBytes,
+		MaxBodyBytes:      defaultMaxBodyBytes,
+		ShutdownTimeout:   defaultShutdownTimeout,
 	}
 
 	if v := os.Getenv("ACCESS_TOKEN_TTL"); v != "" {
@@ -52,6 +83,83 @@ func Load() (Config, error) {
 			return Config{}, errors.New("BcryptCost must be between 4 and 31")
 		}
 		cfg.BcryptCost = c
+	}
+
+	if v := os.Getenv("READ_HEADER_TIMEOUT"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid READ_HEADER_TIMEOUT: %w", err)
+		}
+		if d < 0 {
+			return Config{}, errors.New("READ_HEADER_TIMEOUT must be non-negative")
+		}
+		cfg.ReadHeaderTimeout = d
+	}
+
+	if v := os.Getenv("READ_TIMEOUT"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid READ_TIMEOUT: %w", err)
+		}
+		if d < 0 {
+			return Config{}, errors.New("READ_TIMEOUT must be non-negative")
+		}
+		cfg.ReadTimeout = d
+	}
+
+	if v := os.Getenv("WRITE_TIMEOUT"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid WRITE_TIMEOUT: %w", err)
+		}
+		if d < 0 {
+			return Config{}, errors.New("WRITE_TIMEOUT must be non-negative")
+		}
+		cfg.WriteTimeout = d
+	}
+
+	if v := os.Getenv("IDLE_TIMEOUT"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid IDLE_TIMEOUT: %w", err)
+		}
+		if d < 0 {
+			return Config{}, errors.New("IDLE_TIMEOUT must be non-negative")
+		}
+		cfg.IdleTimeout = d
+	}
+
+	if v := os.Getenv("MAX_HEADER_BYTES"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid MAX_HEADER_BYTES: %w", err)
+		}
+		if n <= 0 {
+			return Config{}, errors.New("MAX_HEADER_BYTES must be positive")
+		}
+		cfg.MaxHeaderBytes = n
+	}
+
+	if v := os.Getenv("MAX_BODY_BYTES"); v != "" {
+		n, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid MAX_BODY_BYTES: %w", err)
+		}
+		if n <= 0 {
+			return Config{}, errors.New("MAX_BODY_BYTES must be positive")
+		}
+		cfg.MaxBodyBytes = n
+	}
+
+	if v := os.Getenv("SHUTDOWN_TIMEOUT"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid SHUTDOWN_TIMEOUT: %w", err)
+		}
+		if d <= 0 {
+			return Config{}, errors.New("SHUTDOWN_TIMEOUT must be positive")
+		}
+		cfg.ShutdownTimeout = d
 	}
 
 	return cfg, nil
