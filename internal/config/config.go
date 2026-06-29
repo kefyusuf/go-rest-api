@@ -14,12 +14,13 @@ import (
 )
 
 type Config struct {
-	Port           string
-	DatabaseURL    string
-	JWTSecret      string
-	AccessTokenTTL time.Duration
-	BcryptCost     int
-	Environment    string
+	Port            string
+	DatabaseURL     string
+	JWTSecret       string
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
+	BcryptCost      int
+	Environment     string
 
 	ReadHeaderTimeout time.Duration
 	ReadTimeout       time.Duration
@@ -36,6 +37,7 @@ const (
 	defaultPort              = "8080"
 	defaultEnv               = "development"
 	defaultAccessTokenTTL    = 15 * time.Minute
+	defaultRefreshTokenTTL   = 7 * 24 * time.Hour
 	defaultBcryptCost        = 10
 	defaultReadHeaderTimeout = 5 * time.Second
 	defaultReadTimeout       = 15 * time.Second
@@ -52,6 +54,7 @@ func Load() (Config, error) {
 		DatabaseURL:      os.Getenv("DATABASE_URL"),
 		JWTSecret:        os.Getenv("JWTSecret"),
 		AccessTokenTTL:   defaultAccessTokenTTL,
+		RefreshTokenTTL:  defaultRefreshTokenTTL,
 		BcryptCost:       defaultBcryptCost,
 		Environment:      getenv("APP_ENV", defaultEnv),
 		ReadHeaderTimeout: defaultReadHeaderTimeout,
@@ -72,6 +75,17 @@ func Load() (Config, error) {
 			return Config{}, errors.New("ACCESS_TOKEN_TTL must be positive")
 		}
 		cfg.AccessTokenTTL = d
+	}
+
+	if v := os.Getenv("REFRESH_TOKEN_TTL"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid REFRESH_TOKEN_TTL: %w", err)
+		}
+		if d <= 0 {
+			return Config{}, errors.New("REFRESH_TOKEN_TTL must be positive")
+		}
+		cfg.RefreshTokenTTL = d
 	}
 
 	if v := os.Getenv("BcryptCost"); v != "" {
@@ -175,6 +189,9 @@ func getenv(key, fallback string) string {
 func (c Config) Validate() error {
 	if c.AccessTokenTTL <= 0 {
 		return errors.New("AccessTokenTTL must be positive")
+	}
+	if c.RefreshTokenTTL <= 0 {
+		return errors.New("RefreshTokenTTL must be positive")
 	}
 	if c.BcryptCost < 4 || c.BcryptCost > 31 {
 		return errors.New("BcryptCost must be between 4 and 31")
