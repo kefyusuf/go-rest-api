@@ -16,7 +16,7 @@ import (
 )
 
 func TestUsersCRUDFlow(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger())
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
@@ -79,7 +79,7 @@ func TestUsersCRUDFlow(t *testing.T) {
 }
 
 func TestUsersDuplicateEmailReturnsConflict(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger())
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
@@ -114,7 +114,7 @@ func TestUsersDuplicateEmailReturnsConflict(t *testing.T) {
 }
 
 func TestUsersValidationErrors(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger())
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
@@ -155,7 +155,7 @@ func TestUsersValidationErrors(t *testing.T) {
 }
 
 func TestUsersCreateRejectsUnsupportedMediaType(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger())
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
@@ -180,7 +180,7 @@ func TestUsersCreateRejectsUnsupportedMediaType(t *testing.T) {
 }
 
 func TestUsersUpdateRejectsUnsupportedMediaType(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger())
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
@@ -216,7 +216,7 @@ func TestUsersUpdateRejectsUnsupportedMediaType(t *testing.T) {
 }
 
 func TestUsersCreateRejectsMalformedJSON(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger())
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
@@ -241,7 +241,7 @@ func TestUsersCreateRejectsMalformedJSON(t *testing.T) {
 }
 
 func TestUsersCreateRejectsEmptyBody(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger())
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
@@ -266,7 +266,7 @@ func TestUsersCreateRejectsEmptyBody(t *testing.T) {
 }
 
 func TestUsersUpdateRejectsMalformedJSON(t *testing.T) {
-	app := server.New(store.NewMemoryUserStore(), newTestLogger())
+	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
