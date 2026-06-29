@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	_ "go-lang/docs"
 	"go-lang/internal/config"
@@ -37,13 +41,47 @@ func main() {
 	defer cleanup()
 
 	addr := ":" + cfg.Port
-	app := server.New(userStore, logger)
+	app := server.New(userStore, logger, server.Options{
+		MaxBodyBytes: cfg.MaxBodyBytes,
+	})
 
-	logger.Info("server starting", slog.String("addr", addr))
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           app,
+		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+		ReadTimeout:       cfg.ReadTimeout,
+		WriteTimeout:      cfg.WriteTimeout,
+		IdleTimeout:       cfg.IdleTimeout,
+		MaxHeaderBytes:    cfg.MaxHeaderBytes,
+	}
 
-	if err := http.ListenAndServe(addr, app); err != nil {
-		logger.Error("server stopped", slog.String("error", err.Error()))
-		os.Exit(1)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	serverErr := make(chan error, 1)
+	go func() {
+		logger.Info("server starting", slog.String("addr", addr))
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErr <- err
+		}
+		close(serverErr)
+	}()
+
+	select {
+	case err := <-serverErr:
+		if err != nil {
+			logger.Error("server stopped with error", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+	case <-ctx.Done():
+		logger.Info("shutdown signal received, draining connections")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			logger.Error("graceful shutdown failed", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+		logger.Info("server stopped cleanly")
 	}
 }
 
