@@ -1313,6 +1313,34 @@ If a body endpoint receives a `Content-Type` other than
 
 If a path parameter is invalid, the API returns `400 Bad Request`.
 
+## Caching
+
+`GET /users/{id}` and `GET /me` are served through a read-through
+cache (`internal/store/cached_user_store.go`) that wraps the
+underlying `UserStore`. The cache keeps a serialised user payload
+keyed by id with a configurable TTL (default `5m`, override with
+`USER_CACHE_TTL`).
+
+When `REDIS_URL` is set, the cache uses `go-redis` and is shared
+across instances. When `REDIS_URL` is empty, an in-process map is
+used; the warning is logged at startup and the cache is lost on
+restart. This is the right behaviour for the in-memory starter and
+fine for a single-instance deployment but should be replaced before
+scaling out.
+
+Cache invalidation rules:
+
+- `Create`, `Update`, `UpdatePassword`, and `Delete` invalidate the
+  cache entry for the affected user id
+- The cache only caches `GetByID`. List and email lookup always go to
+  the store so the underlying data cannot drift
+
+Cache failures never bring the API down. A miss on the cache is
+treated as a cache miss and the loader runs. A write failure logs at
+debug level (not in this layer) and leaves the cache as-is.
+
+## Quick curl examples
+
 ## Quick curl examples
 
 A few examples you can run directly from the terminal to try things
@@ -1417,6 +1445,8 @@ field-level `details`.
 | `MAX_HEADER_BYTES` | API application | `1048576` | Maximum header size in bytes |
 | `MAX_BODY_BYTES` | API application | `1048576` | Maximum request body size in bytes |
 | `SHUTDOWN_TIMEOUT` | API application | `15s` | Maximum time to drain in-flight requests on shutdown |
+| `REDIS_URL` | API application | empty | When set, the user cache uses Redis. Empty falls back to an in-process map. |
+| `USER_CACHE_TTL` | API application | `5m` | TTL for cached user payloads read by `/users/{id}` and `/me`. |
 
 ## Docker network logic
 
