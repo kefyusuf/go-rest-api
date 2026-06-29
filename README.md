@@ -1366,6 +1366,33 @@ These are set only if the handler has not already set them, so
 specific endpoints can override individual values without
 duplicating the rest.
 
+## Idempotency
+
+`POST /users` and `POST /auth/register` accept an optional
+`Idempotency-Key` request header. The first call with a given key
+runs the handler and caches the response (status, body, content
+type) for `IDEMPOTENCY_TTL` (default `24h`).
+
+A retry with the same key and the same request body returns the
+cached response with an `Idempotent-Replay: true` header. The
+handler does not run a second time, so the underlying store is not
+re-mutated.
+
+A retry with the same key but a different body returns `409
+Conflict` with the shared error envelope. The error code is
+`CONFLICT` and the message is `idempotency key reused with a
+different request body`. This protects against an honest client
+re-using an old key by accident.
+
+When `Idempotency-Key` is not set, the handler runs normally and
+the standard duplicate checks (for example, duplicate email) take
+over.
+
+The in-memory store is per process. A future `layer/11` will add a
+Redis-backed store so retries across instances land on the same
+cache. Until then, an instance restart drops the cache and the
+first request after restart always runs.
+
 ## Caching
 
 `GET /users/{id}` and `GET /me` are served through a read-through
@@ -1505,6 +1532,7 @@ field-level `details`.
 | `AUTH_RATE_LIMIT_PER_SECOND` | API application | `5` | Sustained rate of the auth-endpoint limiter. |
 | `AUTH_RATE_LIMIT_BURST` | API application | `10` | Burst size of the auth limiter. |
 | `CORS_ALLOWED_ORIGINS` | API application | empty | Comma-separated list of origins allowed by CORS. Empty disables cross-origin browser access. |
+| `IDEMPOTENCY_TTL` | API application | `24h` | How long a successful `Idempotency-Key` response is replayed. |
 
 ## Docker network logic
 
