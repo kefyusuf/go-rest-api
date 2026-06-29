@@ -22,7 +22,7 @@ type Options struct {
 	MaxBodyBytes  int64
 	TokenIssuer   *auth.TokenIssuer
 	RefreshIssuer *auth.TokenIssuer
-	Blacklist     *auth.Blacklist
+	Blacklist     auth.Blacklist
 	BcryptCost    int
 	Metrics       *observability.Metrics
 	HealthProbes  *observability.HealthProbes

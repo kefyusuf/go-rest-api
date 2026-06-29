@@ -34,7 +34,7 @@ func jwtMintExpired(t *testing.T, secret string) string {
 	return signed
 }
 
-func newAuthApp(t *testing.T) (*httptest.Server, *auth.TokenIssuer, *auth.TokenIssuer, *auth.Blacklist, store.UserStore) {
+func newAuthApp(t *testing.T) (*httptest.Server, *auth.TokenIssuer, *auth.TokenIssuer, auth.Blacklist, store.UserStore) {
 	t.Helper()
 	userStore := store.NewMemoryUserStore()
 	issuer, err := auth.NewTokenIssuer(testJWTSecret, 15*time.Minute, "test", auth.KindAccess)
