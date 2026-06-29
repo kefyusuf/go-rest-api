@@ -13,6 +13,7 @@ var ErrEmailAlreadyExists = errors.New("email already exists")
 type UserStore interface {
 	List() ([]model.User, error)
 	GetByID(id int) (model.User, error)
+	GetByEmail(email string) (model.User, error)
 	Create(input model.CreateUserRequest) (model.User, error)
 	Update(id int, input model.UpdateUserRequest) (model.User, error)
 	Delete(id int) error
@@ -54,6 +55,19 @@ func (s *MemoryUserStore) GetByID(id int) (model.User, error) {
 	return model.User{}, ErrUserNotFound
 }
 
+func (s *MemoryUserStore) GetByEmail(email string) (model.User, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for _, user := range s.users {
+		if user.Email == email {
+			return user, nil
+		}
+	}
+
+	return model.User{}, ErrUserNotFound
+}
+
 func (s *MemoryUserStore) Create(input model.CreateUserRequest) (model.User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -65,9 +79,10 @@ func (s *MemoryUserStore) Create(input model.CreateUserRequest) (model.User, err
 	}
 
 	user := model.User{
-		ID:    s.nextID,
-		Name:  input.Name,
-		Email: input.Email,
+		ID:           s.nextID,
+		Name:         input.Name,
+		Email:        input.Email,
+		PasswordHash: input.Password,
 	}
 
 	s.users = append(s.users, user)
