@@ -44,6 +44,8 @@ type Config struct {
 	CORSAllowedOrigins []string
 	CORSAllowedMethods []string
 	CORSAllowedHeaders []string
+
+	IdempotencyTTL time.Duration
 }
 
 const (
@@ -64,6 +66,7 @@ const (
 	defaultRateLimitBurst      = 40
 	defaultAuthRateLimitPerSecond = 5
 	defaultAuthRateLimitBurst     = 10
+	defaultIdempotencyTTL          = 24 * time.Hour
 )
 
 func Load() (Config, error) {
@@ -88,6 +91,7 @@ func Load() (Config, error) {
 		RateLimitBurst:     defaultRateLimitBurst,
 		AuthRateLimitPerSecond: defaultAuthRateLimitPerSecond,
 		AuthRateLimitBurst:     defaultAuthRateLimitBurst,
+		IdempotencyTTL:         defaultIdempotencyTTL,
 	}
 
 	if v := os.Getenv("ACCESS_TOKEN_TTL"); v != "" {
@@ -173,6 +177,17 @@ func Load() (Config, error) {
 				cfg.CORSAllowedOrigins = append(cfg.CORSAllowedOrigins, o)
 			}
 		}
+	}
+
+	if v := os.Getenv("IDEMPOTENCY_TTL"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid IDEMPOTENCY_TTL: %w", err)
+		}
+		if d <= 0 {
+			return Config{}, errors.New("IDEMPOTENCY_TTL must be positive")
+		}
+		cfg.IdempotencyTTL = d
 	}
 
 	if v := os.Getenv("BcryptCost"); v != "" {
