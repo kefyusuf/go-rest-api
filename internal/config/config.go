@@ -171,3 +171,16 @@ func getenv(key, fallback string) string {
 	}
 	return fallback
 }
+
+func (c Config) Validate() error {
+	if c.AccessTokenTTL <= 0 {
+		return errors.New("AccessTokenTTL must be positive")
+	}
+	if c.BcryptCost < 4 || c.BcryptCost > 31 {
+		return errors.New("BcryptCost must be between 4 and 31")
+	}
+	if len(c.JWTSecret) < 32 {
+		return errors.New("JWTSecret must be at least 32 bytes")
+	}
+	return nil
+}

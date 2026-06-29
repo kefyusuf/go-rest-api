@@ -8,6 +8,7 @@ const (
 	ErrorCodeInternal             = "INTERNAL_ERROR"
 	ErrorCodeMethodNotAllowed     = "METHOD_NOT_ALLOWED"
 	ErrorCodeUnsupportedMediaType = "UNSUPPORTED_MEDIA_TYPE"
+	ErrorCodeUnauthorized         = "UNAUTHORIZED"
 )
 
 type ErrorDetail struct {
