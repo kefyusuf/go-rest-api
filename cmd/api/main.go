@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -61,7 +62,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	userStore, cleanup, pinger, err := buildUserStore(cfg, logger)
+	userStore, db, cleanup, pinger, err := buildUserStore(cfg, logger)
 	if err != nil {
 		logger.Error("failed to build user store", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -121,7 +122,11 @@ func main() {
 		defer idempStoreClose()
 	}
 
-	outbox := events.NewOutbox()
+	outbox, _, err := buildOutbox(db, logger)
+	if err != nil {
+		logger.Error("failed to build outbox", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 	var publisher events.Publisher
 	var kafkaClose func() error
 	if len(cfg.KafkaBrokers) > 0 {
@@ -237,26 +242,46 @@ func main() {
 	}
 }
 
-func buildUserStore(cfg config.Config, logger *slog.Logger) (store.UserStore, func(), observability.Pinger, error) {
+func buildUserStore(cfg config.Config, logger *slog.Logger) (store.UserStore, *sql.DB, func(), observability.Pinger, error) {
 	if cfg.DatabaseURL == "" {
 		logger.Warn("DATABASE_URL not set, using in-memory user store")
-		return store.NewMemoryUserStore(), func() {}, nil, nil
+		return store.NewMemoryUserStore(), nil, func() {}, nil, nil
 	}
 
 	db, err := database.OpenPostgres(cfg.DatabaseURL)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	if err := database.RunMigrations(db); err != nil {
 		db.Close()
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	pinger := &sqlPinger{db: db}
-	return store.NewPostgresUserStore(db), func() {
-			db.Close()
-		}, pinger, nil
+	return store.NewPostgresUserStore(db), db, func() { db.Close() }, pinger, nil
+}
+
+// buildOutbox returns a database-backed outbox when DATABASE_URL is
+// set, and the in-memory outbox when it is not. The DBOutbox is
+// durable (events survive a process restart) and multi-replica
+// safe (FOR UPDATE SKIP LOCKED prevents two dispatchers from
+// picking the same row). The closer here is a no-op because the
+// caller owns the *sql.DB.
+func buildOutbox(db *sql.DB, logger *slog.Logger) (events.Outbox, func(), error) {
+	if db == nil {
+		return events.NewOutbox(), func() {}, nil
+	}
+	box := events.NewDBOutbox(db)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := box.EnsureSchema(ctx); err != nil {
+		logger.Warn("failed to ensure outbox schema, falling back to in-memory outbox",
+			slog.String("error", err.Error()))
+		return events.NewOutbox(), func() {}, nil
+	}
+	logger.Info("database-backed outbox enabled")
+	return box, func() {}, nil
 }
 
 type sqlPinger struct {

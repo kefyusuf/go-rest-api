@@ -70,12 +70,17 @@ The README is now a 141-line landing page that points at all five.
 
 ## Open work / known limitations
 
-- **Per-process state.** The reset-token store (auth), the
-  dead-letter list, and the in-memory outbox are process-local.
-  The blacklist, rate limiter, idempotency store, and job queue
-  are now Redis-backed when `REDIS_URL` is set. The interface for
-  the remaining in-memory state is intentionally small so a
-  Redis-backed or RabbitMQ-backed implementation can drop in.
+- **Per-process state.** The reset-token store (auth) and
+  the dead-letter list (jobs) are process-local. The blacklist,
+  rate limiter, idempotency store, job queue, and outbox are
+  now durable when the matching backing service is configured:
+  blacklist / rate limiter / idempotency / job queue switch
+  to Redis when `REDIS_URL` is set; the outbox switches to a
+  database-backed implementation (PostgreSQL, using the same
+  `*sql.DB` as the user store) when `DATABASE_URL` is set. The
+  interface for the remaining in-memory state is intentionally
+  small so a Redis-backed or RabbitMQ-backed implementation can
+  drop in.
 - **In-memory `Publisher`.** As of the most recent commit a
   `KafkaPublisher` is wired in. Set `KAFKA_BROKERS=host:9092` and
   events go to Kafka instead of the log. Leave it empty to keep the
@@ -143,21 +148,24 @@ section of `README.md` and in `docs/LAYERS.md`.
 
 If you are a maintainer coming back to this repository:
 
-1. The outbox dispatcher is process-local. For multi-replica
-   deployments back it with the same database the user store
-   uses (a single `outbox` table); a small replication loop in
-   `cmd/api/main.go` would replace the in-memory slice.
-3. The `welcome_email` job is a mock. Replace the registration in
+1. The reset-token store and the dead-letter list are
+   process-local. For multi-replica deployments back them with
+   Redis (reset tokens are already in-memory in a single map
+   keyed by the random token; a `reset_token_blacklist` table
+   or a Redis SET with a TTL is the drop-in). The dead-letter
+   list is a simple in-memory slice today; the same `database/sql`
+   pattern used for the outbox would work.
+2. The `welcome_email` job is a mock. Replace the registration in
    `cmd/api/main.go` with a real handler (SendGrid / Resend / SES)
    once you have credentials.
-4. CI is wired but the `ci.yml` only exists on the layer branches
+3. CI is wired but the `ci.yml` only exists on the layer branches
    and on the most recent `main` commits. If you rebase an old
    layer branch, the workflow will be missing — re-add it from a
    later commit if you push that branch.
-5. The Kubernetes manifests and Helm chart in `deploy/` have not
+4. The Kubernetes manifests and Helm chart in `deploy/` have not
    been exercised against a real cluster. The compose stack on
    the local dev machine is the only end-to-end verification today.
-6. The Swagger output is OpenAPI 2.0. A future layer could
+5. The Swagger output is OpenAPI 2.0. A future layer could
    switch to `oapi-codegen` or `kin-openapi` for OpenAPI 3.1.
 
 ## Files of interest
