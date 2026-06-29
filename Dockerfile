@@ -9,7 +9,7 @@ RUN go mod download && go mod verify
 
 COPY cmd/ cmd/
 COPY internal/ internal/
-COPY pkg/ pkg/
+COPY docs/ docs/
 
 RUN go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api
 

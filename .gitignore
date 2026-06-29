@@ -1,2 +1,6 @@
 .wrongstack/
 tmp/
+.env
+.env.local
+.env.*.local
+*.env

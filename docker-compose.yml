@@ -26,6 +26,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
       PORT: 8080
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/go_lang?sslmode=disable
