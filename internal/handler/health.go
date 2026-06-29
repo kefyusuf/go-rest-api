@@ -15,7 +15,7 @@ func NewHealthHandler() HealthHandler {
 
 // Check godoc
 // @Summary Health check
-// @Description Uygulamanın çalıştığını kontrol eder
+// @Description Confirms that the application is running
 // @Tags health
 // @Produce json
 // @Success 200 {object} model.HealthResponse
@@ -23,9 +23,7 @@ func NewHealthHandler() HealthHandler {
 // @Router /health [get]
 func (h HealthHandler) Check(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		response.JSON(w, http.StatusMethodNotAllowed, map[string]string{
-			"error": "method not allowed",
-		})
+		response.MethodNotAllowed(w, []string{http.MethodGet}, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 

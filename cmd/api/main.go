@@ -15,7 +15,7 @@ import (
 
 // @title Go API Starter
 // @version 1.0
-// @description Yeni başlayanlar için sade ve anlaşılır Go API altyapısı.
+// @description A clean and beginner-friendly Go API skeleton.
 // @host localhost:8080
 // @BasePath /
 func main() {

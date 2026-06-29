@@ -3,6 +3,8 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"io"
+	"mime"
 	"net/http"
 	"strconv"
 	"strings"
@@ -22,15 +24,15 @@ func NewUserHandler(store store.UserStore) UserHandler {
 
 // ListUsers godoc
 // @Summary List users
-// @Description Tüm kullanıcıları listeler
+// @Description Lists all users
 // @Tags users
 // @Produce json
-// @Success 200 {array} model.User
+// @Success 200 {object} model.ListUsersResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /users [get]
 func (h UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		response.JSON(w, http.StatusMethodNotAllowed, model.ErrorResponse{Error: "method not allowed"})
+		response.MethodNotAllowed(w, []string{http.MethodGet, http.MethodPost}, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 
@@ -40,12 +42,18 @@ func (h UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.JSON(w, http.StatusOK, users)
+	response.JSON(w, http.StatusOK, model.ListUsersResponse{
+		Data: users,
+		Meta: model.ListUsersMeta{
+			NextCursor: nil,
+			Limit:      20,
+		},
+	})
 }
 
 // CreateUser godoc
 // @Summary Create user
-// @Description Yeni kullanıcı oluşturur
+// @Description Creates a new user
 // @Tags users
 // @Accept json
 // @Produce json
@@ -54,22 +62,28 @@ func (h UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 405 {object} model.ErrorResponse
 // @Failure 409 {object} model.ErrorResponse
+// @Failure 415 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /users [post]
 func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		response.JSON(w, http.StatusMethodNotAllowed, model.ErrorResponse{Error: "method not allowed"})
+		response.MethodNotAllowed(w, []string{http.MethodGet, http.MethodPost}, model.ErrorCodeMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	if !isJSONContentType(r.Header.Get("Content-Type")) {
+		response.UnsupportedMediaType(w, model.ErrorCodeUnsupportedMediaType, "Content-Type must be application/json")
 		return
 	}
 
 	var input model.CreateUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		response.JSON(w, http.StatusBadRequest, model.ErrorResponse{Error: "invalid request body"})
+	if message, ok := decodeJSONBody(r, &input); !ok {
+		response.BadRequest(w, model.ErrorCodeBadRequest, message, nil)
 		return
 	}
 
-	if strings.TrimSpace(input.Name) == "" || strings.TrimSpace(input.Email) == "" {
-		response.JSON(w, http.StatusBadRequest, model.ErrorResponse{Error: "name and email are required"})
+	if details := validateUserInput(input.Name, input.Email); details != nil {
+		response.BadRequest(w, model.ErrorCodeValidation, "validation failed", details)
 		return
 	}
 
@@ -84,7 +98,7 @@ func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 // GetUserByID godoc
 // @Summary Get user by ID
-// @Description ID ile kullanıcı getirir
+// @Description Returns a user by id
 // @Tags users
 // @Produce json
 // @Param id path int true "User ID"
@@ -96,13 +110,13 @@ func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 // @Router /users/{id} [get]
 func (h UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		response.JSON(w, http.StatusMethodNotAllowed, model.ErrorResponse{Error: "method not allowed"})
+		response.MethodNotAllowed(w, []string{http.MethodGet, http.MethodPut, http.MethodDelete}, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 
 	id, err := userIDFromPath(r.URL.Path)
 	if err != nil {
-		response.JSON(w, http.StatusBadRequest, model.ErrorResponse{Error: "invalid user id"})
+		response.BadRequest(w, model.ErrorCodeBadRequest, "invalid user id", nil)
 		return
 	}
 
@@ -117,7 +131,7 @@ func (h UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 
 // UpdateUser godoc
 // @Summary Update user
-// @Description Var olan kullanıcıyı günceller
+// @Description Updates an existing user
 // @Tags users
 // @Accept json
 // @Produce json
@@ -128,28 +142,34 @@ func (h UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 // @Failure 404 {object} model.ErrorResponse
 // @Failure 405 {object} model.ErrorResponse
 // @Failure 409 {object} model.ErrorResponse
+// @Failure 415 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /users/{id} [put]
 func (h UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
-		response.JSON(w, http.StatusMethodNotAllowed, model.ErrorResponse{Error: "method not allowed"})
+		response.MethodNotAllowed(w, []string{http.MethodGet, http.MethodPut, http.MethodDelete}, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 
 	id, err := userIDFromPath(r.URL.Path)
 	if err != nil {
-		response.JSON(w, http.StatusBadRequest, model.ErrorResponse{Error: "invalid user id"})
+		response.BadRequest(w, model.ErrorCodeBadRequest, "invalid user id", nil)
+		return
+	}
+
+	if !isJSONContentType(r.Header.Get("Content-Type")) {
+		response.UnsupportedMediaType(w, model.ErrorCodeUnsupportedMediaType, "Content-Type must be application/json")
 		return
 	}
 
 	var input model.UpdateUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		response.JSON(w, http.StatusBadRequest, model.ErrorResponse{Error: "invalid request body"})
+	if message, ok := decodeJSONBody(r, &input); !ok {
+		response.BadRequest(w, model.ErrorCodeBadRequest, message, nil)
 		return
 	}
 
-	if strings.TrimSpace(input.Name) == "" || strings.TrimSpace(input.Email) == "" {
-		response.JSON(w, http.StatusBadRequest, model.ErrorResponse{Error: "name and email are required"})
+	if details := validateUserInput(input.Name, input.Email); details != nil {
+		response.BadRequest(w, model.ErrorCodeValidation, "validation failed", details)
 		return
 	}
 
@@ -164,11 +184,10 @@ func (h UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 // DeleteUser godoc
 // @Summary Delete user
-// @Description Kullanıcıyı siler
+// @Description Deletes a user
 // @Tags users
-// @Produce json
 // @Param id path int true "User ID"
-// @Success 200 {object} model.MessageResponse
+// @Success 204
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 404 {object} model.ErrorResponse
 // @Failure 405 {object} model.ErrorResponse
@@ -176,13 +195,13 @@ func (h UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 // @Router /users/{id} [delete]
 func (h UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		response.JSON(w, http.StatusMethodNotAllowed, model.ErrorResponse{Error: "method not allowed"})
+		response.MethodNotAllowed(w, []string{http.MethodGet, http.MethodPut, http.MethodDelete}, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		return
 	}
 
 	id, err := userIDFromPath(r.URL.Path)
 	if err != nil {
-		response.JSON(w, http.StatusBadRequest, model.ErrorResponse{Error: "invalid user id"})
+		response.BadRequest(w, model.ErrorCodeBadRequest, "invalid user id", nil)
 		return
 	}
 
@@ -191,7 +210,7 @@ func (h UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response.JSON(w, http.StatusOK, model.MessageResponse{Message: "user deleted"})
+	response.NoContent(w)
 }
 
 func userIDFromPath(path string) (int, error) {
@@ -208,16 +227,64 @@ func userIDFromPath(path string) (int, error) {
 	return id, nil
 }
 
+func validateUserInput(name, email string) map[string][]string {
+	details := make(map[string][]string)
+
+	if strings.TrimSpace(name) == "" {
+		details["name"] = append(details["name"], "required")
+	}
+
+	if strings.TrimSpace(email) == "" {
+		details["email"] = append(details["email"], "required")
+	}
+
+	if len(details) == 0 {
+		return nil
+	}
+
+	return details
+}
+
+func isJSONContentType(contentType string) bool {
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+
+	return mediaType == "application/json"
+}
+
+func decodeJSONBody(r *http.Request, target any) (string, bool) {
+	if r.Body == nil {
+		return "request body is required", false
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(target); err != nil {
+		if errors.Is(err, io.EOF) {
+			return "request body is required", false
+		}
+
+		return "invalid request body", false
+	}
+
+	if decoder.More() {
+		return "invalid request body", false
+	}
+
+	return "", true
+}
+
 func handleUserStoreError(w http.ResponseWriter, err error) {
 	if errors.Is(err, store.ErrUserNotFound) {
-		response.JSON(w, http.StatusNotFound, model.ErrorResponse{Error: "user not found"})
+		response.NotFound(w, model.ErrorCodeNotFound, "user not found")
 		return
 	}
 
 	if errors.Is(err, store.ErrEmailAlreadyExists) {
-		response.JSON(w, http.StatusConflict, model.ErrorResponse{Error: "email already exists"})
+		response.Conflict(w, model.ErrorCodeConflict, "email already exists")
 		return
 	}
 
-	response.JSON(w, http.StatusInternalServerError, model.ErrorResponse{Error: "internal server error"})
+	response.InternalError(w, model.ErrorCodeInternal, "internal server error")
 }

@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "Yeni başlayanlar için sade ve anlaşılır Go API altyapısı.",
+        "description": "A clean and beginner-friendly Go API skeleton.",
         "title": "Go API Starter",
         "contact": {},
         "version": "1.0"
@@ -11,7 +11,7 @@
     "paths": {
         "/health": {
             "get": {
-                "description": "Uygulamanın çalıştığını kontrol eder",
+                "description": "Confirms that the application is running",
                 "produces": [
                     "application/json"
                 ],
@@ -23,13 +23,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.HealthResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.HealthResponse"
                         }
                     },
                     "405": {
                         "description": "Method Not Allowed",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -37,7 +37,7 @@
         },
         "/users": {
             "get": {
-                "description": "Tüm kullanıcıları listeler",
+                "description": "Lists all users",
                 "produces": [
                     "application/json"
                 ],
@@ -49,22 +49,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.User"
-                            }
+                            "$ref": "#/definitions/go-lang_internal_model.ListUsersResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     }
                 }
             },
             "post": {
-                "description": "Yeni kullanıcı oluşturur",
+                "description": "Creates a new user",
                 "consumes": [
                     "application/json"
                 ],
@@ -82,7 +79,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreateUserRequest"
+                            "$ref": "#/definitions/go-lang_internal_model.CreateUserRequest"
                         }
                     }
                 ],
@@ -90,31 +87,37 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.User"
+                            "$ref": "#/definitions/go-lang_internal_model.User"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
                     "405": {
                         "description": "Method Not Allowed",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -122,7 +125,7 @@
         },
         "/users/{id}": {
             "get": {
-                "description": "ID ile kullanıcı getirir",
+                "description": "Returns a user by id",
                 "produces": [
                     "application/json"
                 ],
@@ -143,37 +146,37 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.User"
+                            "$ref": "#/definitions/go-lang_internal_model.User"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
                     "405": {
                         "description": "Method Not Allowed",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     }
                 }
             },
             "put": {
-                "description": "Var olan kullanıcıyı günceller",
+                "description": "Updates an existing user",
                 "consumes": [
                     "application/json"
                 ],
@@ -198,7 +201,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.UpdateUserRequest"
+                            "$ref": "#/definitions/go-lang_internal_model.UpdateUserRequest"
                         }
                     }
                 ],
@@ -206,46 +209,49 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.User"
+                            "$ref": "#/definitions/go-lang_internal_model.User"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
                     "405": {
                         "description": "Method Not Allowed",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
+                        }
+                    },
+                    "415": {
+                        "description": "Unsupported Media Type",
+                        "schema": {
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     }
                 }
             },
             "delete": {
-                "description": "Kullanıcıyı siler",
-                "produces": [
-                    "application/json"
-                ],
+                "description": "Deletes a user",
                 "tags": [
                     "users"
                 ],
@@ -260,34 +266,31 @@
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.MessageResponse"
-                        }
+                    "204": {
+                        "description": "No Content"
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
                     "405": {
                         "description": "Method Not Allowed",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/go-lang_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -295,7 +298,7 @@
         }
     },
     "definitions": {
-        "model.CreateUserRequest": {
+        "go-lang_internal_model.CreateUserRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -306,15 +309,35 @@
                 }
             }
         },
-        "model.ErrorResponse": {
+        "go-lang_internal_model.ErrorDetail": {
             "type": "object",
             "properties": {
-                "error": {
+                "code": {
+                    "type": "string"
+                },
+                "details": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "message": {
                     "type": "string"
                 }
             }
         },
-        "model.HealthResponse": {
+        "go-lang_internal_model.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "$ref": "#/definitions/go-lang_internal_model.ErrorDetail"
+                }
+            }
+        },
+        "go-lang_internal_model.HealthResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -325,15 +348,32 @@
                 }
             }
         },
-        "model.MessageResponse": {
+        "go-lang_internal_model.ListUsersMeta": {
             "type": "object",
             "properties": {
-                "message": {
+                "limit": {
+                    "type": "integer"
+                },
+                "nextCursor": {
                     "type": "string"
                 }
             }
         },
-        "model.UpdateUserRequest": {
+        "go-lang_internal_model.ListUsersResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/go-lang_internal_model.User"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/go-lang_internal_model.ListUsersMeta"
+                }
+            }
+        },
+        "go-lang_internal_model.UpdateUserRequest": {
             "type": "object",
             "properties": {
                 "email": {
@@ -344,7 +384,7 @@
                 }
             }
         },
-        "model.User": {
+        "go-lang_internal_model.User": {
             "type": "object",
             "properties": {
                 "email": {

@@ -1,37 +1,61 @@
 basePath: /
 definitions:
-  model.CreateUserRequest:
+  go-lang_internal_model.CreateUserRequest:
     properties:
       email:
         type: string
       name:
         type: string
     type: object
-  model.ErrorResponse:
+  go-lang_internal_model.ErrorDetail:
     properties:
-      error:
+      code:
+        type: string
+      details:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        type: object
+      message:
         type: string
     type: object
-  model.HealthResponse:
+  go-lang_internal_model.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/go-lang_internal_model.ErrorDetail'
+    type: object
+  go-lang_internal_model.HealthResponse:
     properties:
       message:
         type: string
       status:
         type: string
     type: object
-  model.MessageResponse:
+  go-lang_internal_model.ListUsersMeta:
     properties:
-      message:
+      limit:
+        type: integer
+      nextCursor:
         type: string
     type: object
-  model.UpdateUserRequest:
+  go-lang_internal_model.ListUsersResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/go-lang_internal_model.User'
+        type: array
+      meta:
+        $ref: '#/definitions/go-lang_internal_model.ListUsersMeta'
+    type: object
+  go-lang_internal_model.UpdateUserRequest:
     properties:
       email:
         type: string
       name:
         type: string
     type: object
-  model.User:
+  go-lang_internal_model.User:
     properties:
       email:
         type: string
@@ -43,120 +67,118 @@ definitions:
 host: localhost:8080
 info:
   contact: {}
-  description: Yeni başlayanlar için sade ve anlaşılır Go API altyapısı.
+  description: A clean and beginner-friendly Go API skeleton.
   title: Go API Starter
   version: "1.0"
 paths:
   /health:
     get:
-      description: Uygulamanın çalıştığını kontrol eder
+      description: Confirms that the application is running
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.HealthResponse'
+            $ref: '#/definitions/go-lang_internal_model.HealthResponse'
         "405":
           description: Method Not Allowed
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
       summary: Health check
       tags:
       - health
   /users:
     get:
-      description: Tüm kullanıcıları listeler
+      description: Lists all users
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.User'
-            type: array
+            $ref: '#/definitions/go-lang_internal_model.ListUsersResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
       summary: List users
       tags:
       - users
     post:
       consumes:
       - application/json
-      description: Yeni kullanıcı oluşturur
+      description: Creates a new user
       parameters:
       - description: New user
         in: body
         name: user
         required: true
         schema:
-          $ref: '#/definitions/model.CreateUserRequest'
+          $ref: '#/definitions/go-lang_internal_model.CreateUserRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/model.User'
+            $ref: '#/definitions/go-lang_internal_model.User'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
         "405":
           description: Method Not Allowed
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
       summary: Create user
       tags:
       - users
   /users/{id}:
     delete:
-      description: Kullanıcıyı siler
+      description: Deletes a user
       parameters:
       - description: User ID
         in: path
         name: id
         required: true
         type: integer
-      produces:
-      - application/json
       responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.MessageResponse'
+        "204":
+          description: No Content
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
         "405":
           description: Method Not Allowed
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
       summary: Delete user
       tags:
       - users
     get:
-      description: ID ile kullanıcı getirir
+      description: Returns a user by id
       parameters:
       - description: User ID
         in: path
@@ -169,30 +191,30 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.User'
+            $ref: '#/definitions/go-lang_internal_model.User'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
         "405":
           description: Method Not Allowed
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
       summary: Get user by ID
       tags:
       - users
     put:
       consumes:
       - application/json
-      description: Var olan kullanıcıyı günceller
+      description: Updates an existing user
       parameters:
       - description: User ID
         in: path
@@ -204,34 +226,38 @@ paths:
         name: user
         required: true
         schema:
-          $ref: '#/definitions/model.UpdateUserRequest'
+          $ref: '#/definitions/go-lang_internal_model.UpdateUserRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.User'
+            $ref: '#/definitions/go-lang_internal_model.User'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
         "405":
           description: Method Not Allowed
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
       summary: Update user
       tags:
       - users
