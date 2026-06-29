@@ -27,6 +27,22 @@ definitions:
       error:
         $ref: '#/definitions/go-lang_internal_model.ErrorDetail'
     type: object
+  go-lang_internal_model.ForgotPasswordRequest:
+    properties:
+      email:
+        type: string
+    type: object
+  go-lang_internal_model.ForgotPasswordResponse:
+    properties:
+      accepted:
+        type: boolean
+      expiresAt:
+        type: string
+      resetUrl:
+        type: string
+      token:
+        type: string
+    type: object
   go-lang_internal_model.HealthResponse:
     properties:
       message:
@@ -65,10 +81,26 @@ definitions:
         type: string
       expiresIn:
         type: integer
+      refreshExpiresAt:
+        type: string
+      refreshToken:
+        type: string
       tokenType:
         type: string
       user:
         $ref: '#/definitions/go-lang_internal_model.User'
+    type: object
+  go-lang_internal_model.RefreshRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  go-lang_internal_model.ResetPasswordRequest:
+    properties:
+      password:
+        type: string
+      token:
+        type: string
     type: object
   go-lang_internal_model.UpdateUserRequest:
     properties:
@@ -93,12 +125,45 @@ info:
   title: Go API Starter
   version: "1.0"
 paths:
+  /auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Always returns 202 to avoid leaking which emails are registered. In this
+        in-memory starter the response includes the reset token directly; a
+        production deployment would email it to the user instead.
+      parameters:
+      - description: Forgot password request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/go-lang_internal_model.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ForgotPasswordResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+      summary: Forgot password
+      tags:
+      - auth
   /auth/login:
     post:
       consumes:
       - application/json
-      description: Authenticates a user with email and password, returns a JWT access
-        token
+      description: Authenticates a user with email and password, returns JWT access
+        and refresh tokens
       parameters:
       - description: Login credentials
         in: body
@@ -126,6 +191,120 @@ paths:
           schema:
             $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
       summary: Login
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: Revokes the bearer token used in this request
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Trades a valid refresh token for a new access token (and a new
+        refresh token)
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/go-lang_internal_model.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+      summary: Refresh
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user and returns a JWT access token
+      parameters:
+      - description: New account
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/go-lang_internal_model.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+      summary: Register
+      tags:
+      - auth
+  /auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Resets a user's password using a valid reset token
+      parameters:
+      - description: Reset password request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/go-lang_internal_model.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+        "415":
+          description: Unsupported Media Type
+          schema:
+            $ref: '#/definitions/go-lang_internal_model.ErrorResponse'
+      summary: Reset password
       tags:
       - auth
   /health:
