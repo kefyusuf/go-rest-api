@@ -1313,6 +1313,59 @@ If a body endpoint receives a `Content-Type` other than
 
 If a path parameter is invalid, the API returns `400 Bad Request`.
 
+## Hardening
+
+Three layers protect the API beyond the basic request/response
+contract.
+
+### Rate limiting
+
+Two token-bucket limiters, in-process per instance, keyed by client
+IP (or `X-Forwarded-For` / `X-Real-IP` if present):
+
+- Global limiter applied to `/users`, `/users/{id}`, `/me`:
+  default `RATE_LIMIT_PER_SECOND=20`, `RATE_LIMIT_BURST=40`
+- Auth limiter applied to `/auth/login`, `/auth/register`,
+  `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`:
+  default `AUTH_RATE_LIMIT_PER_SECOND=5`, `AUTH_RATE_LIMIT_BURST=10`
+
+A request that exceeds the limit returns `429 Too Many Requests` with
+a `RATE_LIMITED` code, the shared error envelope, and a
+`Retry-After` header in seconds.
+
+The limiter is per-process and lost on restart. For a multi-instance
+deployment the limiter should be backed by Redis. A future
+`layer/08` will replace this with a Redis-backed store.
+
+### CORS
+
+`CORS(opts.CORS)` adds a small, opt-in CORS layer. Origins are
+configured with `CORS_ALLOWED_ORIGINS` as a comma-separated list. The
+middleware echoes the request's `Origin` back as
+`Access-Control-Allow-Origin` only when the origin is in the
+allow-list, and sets `Vary: Origin` so caches do not serve the
+wrong CORS headers to a different origin. A `Vary: *` shorthand is
+deliberately not used. Preflight `OPTIONS` requests return `204 No
+Content` with `Access-Control-Allow-Methods`,
+`Access-Control-Allow-Headers`, and `Access-Control-Max-Age`.
+
+When `CORS_ALLOWED_ORIGINS` is empty the middleware still runs but
+does not set any `Access-Control-*` header, so a browser-based client
+cannot call the API cross-origin. This is the right default for an
+API used by server-to-server clients.
+
+### Security headers
+
+Every response carries a small set of safe-by-default headers:
+
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Referrer-Policy: no-referrer`
+
+These are set only if the handler has not already set them, so
+specific endpoints can override individual values without
+duplicating the rest.
+
 ## Caching
 
 `GET /users/{id}` and `GET /me` are served through a read-through
@@ -1447,6 +1500,11 @@ field-level `details`.
 | `SHUTDOWN_TIMEOUT` | API application | `15s` | Maximum time to drain in-flight requests on shutdown |
 | `REDIS_URL` | API application | empty | When set, the user cache uses Redis. Empty falls back to an in-process map. |
 | `USER_CACHE_TTL` | API application | `5m` | TTL for cached user payloads read by `/users/{id}` and `/me`. |
+| `RATE_LIMIT_PER_SECOND` | API application | `20` | Sustained rate of the global token-bucket limiter (requests per second). |
+| `RATE_LIMIT_BURST` | API application | `40` | Burst size of the global limiter. |
+| `AUTH_RATE_LIMIT_PER_SECOND` | API application | `5` | Sustained rate of the auth-endpoint limiter. |
+| `AUTH_RATE_LIMIT_BURST` | API application | `10` | Burst size of the auth limiter. |
+| `CORS_ALLOWED_ORIGINS` | API application | empty | Comma-separated list of origins allowed by CORS. Empty disables cross-origin browser access. |
 
 ## Docker network logic
 
