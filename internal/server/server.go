@@ -11,6 +11,7 @@ import (
 	"go-lang/internal/handler"
 	"go-lang/internal/model"
 	"go-lang/internal/observability"
+	"go-lang/internal/ratelimit"
 	"go-lang/internal/response"
 	"go-lang/internal/store"
 )
@@ -24,6 +25,10 @@ type Options struct {
 	Metrics       *observability.Metrics
 	HealthProbes  *observability.HealthProbes
 	DBPinger      observability.Pinger
+
+	GlobalLimiter *ratelimit.Limiter
+	AuthLimiter   *ratelimit.Limiter
+	CORS          CORSConfig
 }
 
 func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Handler {
@@ -36,9 +41,12 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 	userHandler := handler.NewUserHandler(userStore, opts.BcryptCost)
 	meHandler := handler.NewMeHandler(userStore)
 
+	authLimiter := RateLimit(RateLimitConfig{Limiter: opts.AuthLimiter})
+	globalLimiter := RateLimit(RateLimitConfig{Limiter: opts.GlobalLimiter})
+
 	if opts.HealthProbes != nil {
-		mux.HandleFunc("/health/live", opts.HealthProbes.Liveness)
-		mux.HandleFunc("/health/ready", opts.HealthProbes.Readiness(opts.DBPinger))
+		mux.Handle("/health/live", http.HandlerFunc(opts.HealthProbes.Liveness))
+		mux.Handle("/health/ready", http.HandlerFunc(opts.HealthProbes.Readiness(opts.DBPinger)))
 	}
 	if opts.Metrics != nil {
 		mux.Handle("/metrics", opts.Metrics.Handler())
@@ -49,11 +57,11 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 			BcryptCost: opts.BcryptCost,
 		})
 
-		mux.HandleFunc("/auth/login", authHandler.Login)
-		mux.HandleFunc("/auth/register", authHandler.Register)
-		mux.HandleFunc("/auth/refresh", authHandler.Refresh)
-		mux.HandleFunc("/auth/forgot-password", authHandler.ForgotPassword)
-		mux.HandleFunc("/auth/reset-password", authHandler.ResetPassword)
+		mux.Handle("/auth/login", authLimiter(http.HandlerFunc(authHandler.Login)))
+		mux.Handle("/auth/register", authLimiter(http.HandlerFunc(authHandler.Register)))
+		mux.Handle("/auth/refresh", authLimiter(http.HandlerFunc(authHandler.Refresh)))
+		mux.Handle("/auth/forgot-password", authLimiter(http.HandlerFunc(authHandler.ForgotPassword)))
+		mux.Handle("/auth/reset-password", authLimiter(http.HandlerFunc(authHandler.ResetPassword)))
 		mux.Handle("/auth/logout", RequireAuth(opts.TokenIssuer, opts.Blacklist)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			raw := r.Header.Get("Authorization")
 			parts := strings.SplitN(raw, " ", 2)
@@ -63,18 +71,18 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 			}
 			authHandler.Logout(w, r, strings.TrimSpace(parts[1]))
 		})))
-		mux.Handle("/me", RequireAuth(opts.TokenIssuer, opts.Blacklist)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mux.Handle("/me", globalLimiter(RequireAuth(opts.TokenIssuer, opts.Blacklist)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userID, ok := UserIDFromContext(r.Context())
 			if !ok {
 				response.Error(w, http.StatusUnauthorized, model.ErrorCodeUnauthorized, "missing or invalid bearer token", nil)
 				return
 			}
 			meHandler.Me(w, r, userID)
-		})))
+		}))))
 	}
 
 	mux.HandleFunc("/health", healthHandler.Check)
-	mux.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/users", globalLimiter(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			userHandler.ListUsers(w, r)
@@ -83,8 +91,8 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 		default:
 			response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		}
-	})
-	mux.HandleFunc("/users/", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("/users/", globalLimiter(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			userHandler.GetUserByID(w, r)
@@ -95,7 +103,7 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 		default:
 			response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		}
-	})
+	})))
 	mux.Handle("/swagger/", httpSwagger.WrapHandler)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
@@ -107,11 +115,15 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 		})
 	})
 
-	chain := RequestID(
-		Recovery(logger)(
-			AccessLog(logger)(
-				MetricsMiddleware(opts.Metrics)(
-					BodyLimit(opts.MaxBodyBytes)(mux),
+	chain := CORS(opts.CORS)(
+		SecurityHeaders(
+			RequestID(
+				Recovery(logger)(
+					AccessLog(logger)(
+						MetricsMiddleware(opts.Metrics)(
+							BodyLimit(opts.MaxBodyBytes)(mux),
+						),
+					),
 				),
 			),
 		),
