@@ -24,7 +24,7 @@ func NewUserHandler(store store.UserStore) UserHandler {
 
 // ListUsers godoc
 // @Summary List users
-// @Description Tüm kullanıcıları listeler
+// @Description Lists all users
 // @Tags users
 // @Produce json
 // @Success 200 {object} model.ListUsersResponse
@@ -53,7 +53,7 @@ func (h UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 // CreateUser godoc
 // @Summary Create user
-// @Description Yeni kullanıcı oluşturur
+// @Description Creates a new user
 // @Tags users
 // @Accept json
 // @Produce json
@@ -97,7 +97,7 @@ func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 // GetUserByID godoc
 // @Summary Get user by ID
-// @Description ID ile kullanıcı getirir
+// @Description Returns a user by id
 // @Tags users
 // @Produce json
 // @Param id path int true "User ID"
@@ -130,7 +130,7 @@ func (h UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 
 // UpdateUser godoc
 // @Summary Update user
-// @Description Var olan kullanıcıyı günceller
+// @Description Updates an existing user
 // @Tags users
 // @Accept json
 // @Produce json
@@ -182,7 +182,7 @@ func (h UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 // DeleteUser godoc
 // @Summary Delete user
-// @Description Kullanıcıyı siler
+// @Description Deletes a user
 // @Tags users
 // @Produce json
 // @Param id path int true "User ID"
