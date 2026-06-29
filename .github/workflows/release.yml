@@ -30,7 +30,7 @@ jobs:
           fi
 
       - name: set up docker buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: log in to ghcr
         if: github.event_name == 'push'
