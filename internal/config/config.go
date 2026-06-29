@@ -31,6 +31,9 @@ type Config struct {
 	MaxBodyBytes int64
 
 	ShutdownTimeout time.Duration
+
+	RedisURL  string
+	UserCacheTTL time.Duration
 }
 
 const (
@@ -46,6 +49,7 @@ const (
 	defaultMaxHeaderBytes    = 1 << 20
 	defaultMaxBodyBytes      = 1 << 20
 	defaultShutdownTimeout   = 15 * time.Second
+	defaultUserCacheTTL       = 5 * time.Minute
 )
 
 func Load() (Config, error) {
@@ -64,6 +68,8 @@ func Load() (Config, error) {
 		MaxHeaderBytes:    defaultMaxHeaderBytes,
 		MaxBodyBytes:      defaultMaxBodyBytes,
 		ShutdownTimeout:   defaultShutdownTimeout,
+		RedisURL:          os.Getenv("REDIS_URL"),
+		UserCacheTTL:      defaultUserCacheTTL,
 	}
 
 	if v := os.Getenv("ACCESS_TOKEN_TTL"); v != "" {
@@ -86,6 +92,17 @@ func Load() (Config, error) {
 			return Config{}, errors.New("REFRESH_TOKEN_TTL must be positive")
 		}
 		cfg.RefreshTokenTTL = d
+	}
+
+	if v := os.Getenv("USER_CACHE_TTL"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid USER_CACHE_TTL: %w", err)
+		}
+		if d <= 0 {
+			return Config{}, errors.New("USER_CACHE_TTL must be positive")
+		}
+		cfg.UserCacheTTL = d
 	}
 
 	if v := os.Getenv("BcryptCost"); v != "" {
