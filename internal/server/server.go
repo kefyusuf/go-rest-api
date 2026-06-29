@@ -33,7 +33,7 @@ type Options struct {
 	CORS          CORSConfig
 
 	IdempotencyStore idempotency.Store
-	Outbox           *events.Outbox
+	Outbox           events.Outbox
 }
 
 func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Handler {
