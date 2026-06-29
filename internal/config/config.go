@@ -36,6 +36,10 @@ type Config struct {
 	RedisURL  string
 	UserCacheTTL time.Duration
 
+	KafkaBrokers      []string
+	KafkaTopic        string
+	KafkaWriteTimeout time.Duration
+
 	RateLimitPerSecond float64
 	RateLimitBurst     float64
 	AuthRateLimitPerSecond float64
@@ -87,6 +91,9 @@ func Load() (Config, error) {
 		ShutdownTimeout:   defaultShutdownTimeout,
 		RedisURL:          os.Getenv("REDIS_URL"),
 		UserCacheTTL:      defaultUserCacheTTL,
+		KafkaBrokers:      nil,
+		KafkaTopic:        "go-rest-api.events",
+		KafkaWriteTimeout: 10 * time.Second,
 		RateLimitPerSecond: defaultRateLimitPerSecond,
 		RateLimitBurst:     defaultRateLimitBurst,
 		AuthRateLimitPerSecond: defaultAuthRateLimitPerSecond,
@@ -177,6 +184,27 @@ func Load() (Config, error) {
 				cfg.CORSAllowedOrigins = append(cfg.CORSAllowedOrigins, o)
 			}
 		}
+	}
+
+	if v := os.Getenv("KAFKA_BROKERS"); v != "" {
+		for _, b := range strings.Split(v, ",") {
+			if b = strings.TrimSpace(b); b != "" {
+				cfg.KafkaBrokers = append(cfg.KafkaBrokers, b)
+			}
+		}
+	}
+	if v := os.Getenv("KAFKA_TOPIC"); v != "" {
+		cfg.KafkaTopic = v
+	}
+	if v := os.Getenv("KAFKA_WRITE_TIMEOUT"); v != "" {
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid KAFKA_WRITE_TIMEOUT: %w", err)
+		}
+		if d <= 0 {
+			return Config{}, errors.New("KAFKA_WRITE_TIMEOUT must be positive")
+		}
+		cfg.KafkaWriteTimeout = d
 	}
 
 	if v := os.Getenv("IDEMPOTENCY_TTL"); v != "" {

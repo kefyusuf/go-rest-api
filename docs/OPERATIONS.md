@@ -245,7 +245,7 @@ sh scripts/test-db-down.sh
 | `MAX_HEADER_BYTES` | API application | `1048576` | Maximum header size in bytes |
 | `MAX_BODY_BYTES` | API application | `1048576` | Maximum request body size in bytes |
 | `SHUTDOWN_TIMEOUT` | API application | `15s` | Maximum time to drain in-flight requests on shutdown |
-| `REDIS_URL` | API application | empty | When set, the user cache uses Redis. Empty falls back to an in-process map. |
+| `REDIS_URL` | API application | empty | When set, the user cache, rate limiter, and any future Redis-backed store switch to Redis. Empty keeps everything in-process and per-instance. |
 | `USER_CACHE_TTL` | API application | `5m` | TTL for cached user payloads read by `/users/{id}` and `/me`. |
 | `RATE_LIMIT_PER_SECOND` | API application | `20` | Sustained rate of the global token-bucket limiter (requests per second). |
 | `RATE_LIMIT_BURST` | API application | `40` | Burst size of the global limiter. |
@@ -253,6 +253,9 @@ sh scripts/test-db-down.sh
 | `AUTH_RATE_LIMIT_BURST` | API application | `10` | Burst size of the auth limiter. |
 | `CORS_ALLOWED_ORIGINS` | API application | empty | Comma-separated list of origins allowed by CORS. Empty disables cross-origin browser access. |
 | `IDEMPOTENCY_TTL` | API application | `24h` | How long a successful `Idempotency-Key` response is replayed. |
+| `KAFKA_BROKERS` | API application | empty | Comma-separated list of Kafka brokers. When set, the event publisher switches from the in-memory logger to a Kafka writer. Empty keeps the in-process publisher. |
+| `KAFKA_TOPIC` | API application | `go-rest-api.events` | Default topic for events when the per-event Topic is empty. |
+| `KAFKA_WRITE_TIMEOUT` | API application | `10s` | Per-write timeout for the Kafka writer. |
 
 ---
 

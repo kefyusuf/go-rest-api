@@ -11,7 +11,7 @@ import (
 )
 
 type RateLimitConfig struct {
-	Limiter *ratelimit.Limiter
+	Limiter ratelimit.Limiter
 	KeyFunc func(r *http.Request) string
 }
 
