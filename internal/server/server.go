@@ -1,6 +1,7 @@
 package server
 
 import (
+	"log/slog"
 	"net/http"
 
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -11,7 +12,11 @@ import (
 	"go-lang/internal/store"
 )
 
-func New(userStore store.UserStore) http.Handler {
+func New(userStore store.UserStore, logger *slog.Logger) http.Handler {
+	if logger == nil {
+		logger = slog.Default()
+	}
+
 	mux := http.NewServeMux()
 	healthHandler := handler.NewHealthHandler()
 	userHandler := handler.NewUserHandler(userStore)
@@ -46,5 +51,5 @@ func New(userStore store.UserStore) http.Handler {
 		})
 	})
 
-	return Logging(mux)
+	return RequestID(AccessLog(logger)(mux))
 }
