@@ -95,6 +95,15 @@ The README is now a 141-line landing page that points at all five.
   is consistent across replicas. The in-memory fallback is
   retained for single-instance development. Implementation in
   `internal/auth/blacklist.go`.
+- **In-memory idempotency store.** As of the most recent commit a
+  Redis-backed `RedisStore` is wired in. When `REDIS_URL` is set,
+  each entry lives at `idempotency:<key>` as a single Redis hash
+  with the status, body, content type, request hash, and stored-at
+  serialised as JSON. A per-key EXPIRE-NX sets the TTL only on
+  the first save so subsequent retries do not extend the lifetime.
+  The in-memory fallback is retained for single-instance
+  development. Implementation in
+  `internal/idempotency/redis.go`.
 - **Five open Dependabot PRs** (`actions/upload-artifact`,
   `docker/setup-buildx-action`, `golangci/golangci-lint-action`,
   `docker/build-push-action`, `actions/setup-go`). The
@@ -133,12 +142,10 @@ section of `README.md` and in `docs/LAYERS.md`.
 
 If you are a maintainer coming back to this repository:
 
-1. The idempotency store and the job queue are the remaining
-   in-memory state with the same swap pattern. The
-   `internal/idempotency` and `internal/jobs` packages already
-   have a `Store` / `Queue` interface; a Redis-backed
-   `IdempotencyStore` and a RabbitMQ-backed `JobQueue` (or a
-   Redis-stream-backed one) are drop-in.
+1. The job queue is the remaining in-memory state with the
+   same swap pattern. The `internal/jobs` package already has a
+   `Queue` interface; a RabbitMQ-backed (or Redis-stream-backed)
+   `JobQueue` is drop-in.
 2. The outbox dispatcher is process-local. For multi-replica
    deployments back it with the same database the user store
    uses (a single `outbox` table); a small replication loop in

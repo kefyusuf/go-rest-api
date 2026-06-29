@@ -245,7 +245,7 @@ sh scripts/test-db-down.sh
 | `MAX_HEADER_BYTES` | API application | `1048576` | Maximum header size in bytes |
 | `MAX_BODY_BYTES` | API application | `1048576` | Maximum request body size in bytes |
 | `SHUTDOWN_TIMEOUT` | API application | `15s` | Maximum time to drain in-flight requests on shutdown |
-| `REDIS_URL` | API application | empty | When set, the user cache, the rate limiter, and the JWT revocation blacklist switch to Redis. Empty keeps everything in-process and per-instance. |
+| `REDIS_URL` | API application | empty | When set, the user cache, the rate limiter, the JWT revocation blacklist, and the idempotency store switch to Redis. Empty keeps everything in-process and per-instance. |
 | `USER_CACHE_TTL` | API application | `5m` | TTL for cached user payloads read by `/users/{id}` and `/me`. |
 | `RATE_LIMIT_PER_SECOND` | API application | `20` | Sustained rate of the global token-bucket limiter (requests per second). |
 | `RATE_LIMIT_BURST` | API application | `40` | Burst size of the global limiter. |

@@ -32,7 +32,7 @@ type Options struct {
 	AuthLimiter   ratelimit.Limiter
 	CORS          CORSConfig
 
-	IdempotencyStore *idempotency.MemoryStore
+	IdempotencyStore idempotency.Store
 	Outbox           *events.Outbox
 }
 
