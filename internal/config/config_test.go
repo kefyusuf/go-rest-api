@@ -154,3 +154,36 @@ func TestLoadRejectsNonPositiveShutdownTimeout(t *testing.T) {
 		t.Fatal("expected error for non-positive SHUTDOWN_TIMEOUT, got nil")
 	}
 }
+
+func TestValidateAcceptsLongSecret(t *testing.T) {
+	cfg := Config{
+		AccessTokenTTL: time.Minute,
+		BcryptCost:     10,
+		JWTSecret:      "a-long-enough-secret-of-at-least-32-bytes",
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateRejectsShortSecret(t *testing.T) {
+	cfg := Config{
+		AccessTokenTTL: time.Minute,
+		BcryptCost:     10,
+		JWTSecret:      "short",
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected error for short JWTSecret, got nil")
+	}
+}
+
+func TestValidateRejectsBadBcryptCost(t *testing.T) {
+	cfg := Config{
+		AccessTokenTTL: time.Minute,
+		BcryptCost:     2,
+		JWTSecret:      "a-long-enough-secret-of-at-least-32-bytes",
+	}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected error for out-of-range BcryptCost, got nil")
+	}
+}
