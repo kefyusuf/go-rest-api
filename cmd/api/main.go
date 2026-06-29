@@ -14,6 +14,7 @@ import (
 	cacheimpl "go-lang/internal/cache"
 	"go-lang/internal/config"
 	"go-lang/internal/database"
+	"go-lang/internal/idempotency"
 	"go-lang/internal/observability"
 	"go-lang/internal/ratelimit"
 	"go-lang/internal/server"
@@ -81,18 +82,21 @@ func main() {
 	globalLimiter := ratelimit.New(cfg.RateLimitPerSecond, cfg.RateLimitBurst)
 	authLimiter := ratelimit.New(cfg.AuthRateLimitPerSecond, cfg.AuthRateLimitBurst)
 
+	idempStore := idempotency.NewMemoryStore(cfg.IdempotencyTTL)
+
 	addr := ":" + cfg.Port
 	app := server.New(cachedStore, logger, server.Options{
-		MaxBodyBytes:  cfg.MaxBodyBytes,
-		TokenIssuer:   issuer,
-		RefreshIssuer: refreshIssuer,
-		Blacklist:     auth.NewBlacklist(),
-		BcryptCost:    cfg.BcryptCost,
-		Metrics:       metrics,
-		HealthProbes:  probes,
-		DBPinger:      pinger,
-		GlobalLimiter: globalLimiter,
-		AuthLimiter:   authLimiter,
+		MaxBodyBytes:    cfg.MaxBodyBytes,
+		TokenIssuer:     issuer,
+		RefreshIssuer:   refreshIssuer,
+		Blacklist:       auth.NewBlacklist(),
+		BcryptCost:      cfg.BcryptCost,
+		Metrics:         metrics,
+		HealthProbes:    probes,
+		DBPinger:        pinger,
+		GlobalLimiter:   globalLimiter,
+		AuthLimiter:     authLimiter,
+		IdempotencyStore: idempStore,
 		CORS: server.CORSConfig{
 			AllowedOrigins: cfg.CORSAllowedOrigins,
 		},
