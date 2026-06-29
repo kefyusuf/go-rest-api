@@ -34,20 +34,27 @@ func jwtMintExpired(t *testing.T, secret string) string {
 	return signed
 }
 
-func newAuthApp(t *testing.T) (*httptest.Server, *auth.TokenIssuer, store.UserStore) {
+func newAuthApp(t *testing.T) (*httptest.Server, *auth.TokenIssuer, *auth.TokenIssuer, *auth.Blacklist, store.UserStore) {
 	t.Helper()
 	userStore := store.NewMemoryUserStore()
-	issuer, err := auth.NewTokenIssuer(testJWTSecret, 15*time.Minute, "test")
+	issuer, err := auth.NewTokenIssuer(testJWTSecret, 15*time.Minute, "test", auth.KindAccess)
 	if err != nil {
-		t.Fatalf("token issuer: %v", err)
+		t.Fatalf("access issuer: %v", err)
 	}
+	refresh, err := auth.NewTokenIssuer(testJWTSecret, 24*time.Hour, "test", auth.KindRefresh)
+	if err != nil {
+		t.Fatalf("refresh issuer: %v", err)
+	}
+	blacklist := auth.NewBlacklist()
 
 	app := server.New(userStore, newTestLogger(), server.Options{
-		BcryptCost:  4,
-		TokenIssuer: issuer,
+		BcryptCost:    4,
+		TokenIssuer:   issuer,
+		RefreshIssuer: refresh,
+		Blacklist:     blacklist,
 	})
 	ts := httptest.NewServer(app)
-	return ts, issuer, userStore
+	return ts, issuer, refresh, blacklist, userStore
 }
 
 func seedUser(t *testing.T, ts *httptest.Server, name, email, password string) model.User {
@@ -76,7 +83,7 @@ func seedUser(t *testing.T, ts *httptest.Server, name, email, password string) m
 }
 
 func TestLoginHappyPath(t *testing.T) {
-	ts, _, _ := newAuthApp(t)
+	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
 	seedUser(t, ts, "Ada Lovelace", "ada@example.com", "correct-horse-battery-staple")
@@ -118,7 +125,7 @@ func TestLoginHappyPath(t *testing.T) {
 }
 
 func TestLoginRejectsWrongPassword(t *testing.T) {
-	ts, _, _ := newAuthApp(t)
+	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
 	seedUser(t, ts, "Ada", "ada@example.com", "right-password")
@@ -147,7 +154,7 @@ func TestLoginRejectsWrongPassword(t *testing.T) {
 }
 
 func TestLoginRejectsUnknownUser(t *testing.T) {
-	ts, _, _ := newAuthApp(t)
+	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
 	body, _ := json.Marshal(model.LoginRequest{
@@ -171,7 +178,7 @@ func TestLoginRejectsUnknownUser(t *testing.T) {
 }
 
 func TestLoginValidation(t *testing.T) {
-	ts, _, _ := newAuthApp(t)
+	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
 	body, _ := json.Marshal(model.LoginRequest{Email: "", Password: ""})
@@ -195,7 +202,7 @@ func TestLoginValidation(t *testing.T) {
 }
 
 func TestLoginMalformedJSON(t *testing.T) {
-	ts, _, _ := newAuthApp(t)
+	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
 	res, err := http.Post(ts.URL+"/auth/login", "application/json", bytes.NewReader([]byte("{")))
@@ -210,7 +217,7 @@ func TestLoginMalformedJSON(t *testing.T) {
 }
 
 func TestLoginWrongContentType(t *testing.T) {
-	ts, _, _ := newAuthApp(t)
+	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
 	res, err := http.Post(ts.URL+"/auth/login", "text/plain", bytes.NewReader([]byte("ok")))
@@ -225,7 +232,7 @@ func TestLoginWrongContentType(t *testing.T) {
 }
 
 func TestMeWithValidToken(t *testing.T) {
-	ts, issuer, _ := newAuthApp(t)
+	ts, issuer, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
 	seedUser(t, ts, "Ada", "ada@example.com", "pw")
@@ -256,7 +263,7 @@ func TestMeWithValidToken(t *testing.T) {
 }
 
 func TestMeRejectsMissingHeader(t *testing.T) {
-	ts, _, _ := newAuthApp(t)
+	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
 	res, err := http.Get(ts.URL + "/me")
@@ -271,7 +278,7 @@ func TestMeRejectsMissingHeader(t *testing.T) {
 }
 
 func TestMeRejectsMalformedHeader(t *testing.T) {
-	ts, _, _ := newAuthApp(t)
+	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
 	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/me", nil)
@@ -288,7 +295,7 @@ func TestMeRejectsMalformedHeader(t *testing.T) {
 }
 
 func TestMeRejectsExpiredToken(t *testing.T) {
-	ts, _, _ := newAuthApp(t)
+	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
 	expiredToken := jwtMintExpired(t, testJWTSecret)
@@ -307,7 +314,7 @@ func TestMeRejectsExpiredToken(t *testing.T) {
 }
 
 func TestMeRejectsTamperedToken(t *testing.T) {
-	ts, issuer, _ := newAuthApp(t)
+	ts, issuer, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
 	seedUser(t, ts, "Ada", "ada@example.com", "pw")

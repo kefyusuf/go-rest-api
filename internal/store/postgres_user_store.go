@@ -115,6 +115,21 @@ func (s *PostgresUserStore) Update(id int, input model.UpdateUserRequest) (model
 	return user, nil
 }
 
+func (s *PostgresUserStore) UpdatePassword(id int, passwordHash string) error {
+	result, err := s.db.Exec(`UPDATE users SET password_hash = $1 WHERE id = $2`, passwordHash, id)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrUserNotFound
+	}
+	return nil
+}
+
 func (s *PostgresUserStore) Delete(id int) error {
 	result, err := s.db.Exec(`DELETE FROM users WHERE id = $1`, id)
 	if err != nil {
