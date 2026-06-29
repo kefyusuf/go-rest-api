@@ -9,6 +9,7 @@ import (
 
 	"go-lang/internal/auth"
 	"go-lang/internal/handler"
+	"go-lang/internal/idempotency"
 	"go-lang/internal/model"
 	"go-lang/internal/observability"
 	"go-lang/internal/ratelimit"
@@ -29,6 +30,8 @@ type Options struct {
 	GlobalLimiter *ratelimit.Limiter
 	AuthLimiter   *ratelimit.Limiter
 	CORS          CORSConfig
+
+	IdempotencyStore *idempotency.MemoryStore
 }
 
 func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Handler {
@@ -58,7 +61,7 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 		})
 
 		mux.Handle("/auth/login", authLimiter(http.HandlerFunc(authHandler.Login)))
-		mux.Handle("/auth/register", authLimiter(http.HandlerFunc(authHandler.Register)))
+		mux.Handle("/auth/register", authLimiter(WithIdempotency(IdempotencyOptions{Store: opts.IdempotencyStore}, http.HandlerFunc(authHandler.Register))))
 		mux.Handle("/auth/refresh", authLimiter(http.HandlerFunc(authHandler.Refresh)))
 		mux.Handle("/auth/forgot-password", authLimiter(http.HandlerFunc(authHandler.ForgotPassword)))
 		mux.Handle("/auth/reset-password", authLimiter(http.HandlerFunc(authHandler.ResetPassword)))
@@ -87,7 +90,7 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 		case http.MethodGet:
 			userHandler.ListUsers(w, r)
 		case http.MethodPost:
-			userHandler.CreateUser(w, r)
+			WithIdempotency(IdempotencyOptions{Store: opts.IdempotencyStore}, http.HandlerFunc(userHandler.CreateUser)).ServeHTTP(w, r)
 		default:
 			response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		}
