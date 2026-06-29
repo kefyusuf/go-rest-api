@@ -9,6 +9,7 @@ const (
 	ErrorCodeMethodNotAllowed     = "METHOD_NOT_ALLOWED"
 	ErrorCodeUnsupportedMediaType = "UNSUPPORTED_MEDIA_TYPE"
 	ErrorCodeUnauthorized         = "UNAUTHORIZED"
+	ErrorCodeRateLimited          = "RATE_LIMITED"
 )
 
 type ErrorDetail struct {

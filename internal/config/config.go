@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -34,6 +35,15 @@ type Config struct {
 
 	RedisURL  string
 	UserCacheTTL time.Duration
+
+	RateLimitPerSecond float64
+	RateLimitBurst     float64
+	AuthRateLimitPerSecond float64
+	AuthRateLimitBurst     float64
+
+	CORSAllowedOrigins []string
+	CORSAllowedMethods []string
+	CORSAllowedHeaders []string
 }
 
 const (
@@ -50,6 +60,10 @@ const (
 	defaultMaxBodyBytes      = 1 << 20
 	defaultShutdownTimeout   = 15 * time.Second
 	defaultUserCacheTTL       = 5 * time.Minute
+	defaultRateLimitPerSecond  = 20
+	defaultRateLimitBurst      = 40
+	defaultAuthRateLimitPerSecond = 5
+	defaultAuthRateLimitBurst     = 10
 )
 
 func Load() (Config, error) {
@@ -70,6 +84,10 @@ func Load() (Config, error) {
 		ShutdownTimeout:   defaultShutdownTimeout,
 		RedisURL:          os.Getenv("REDIS_URL"),
 		UserCacheTTL:      defaultUserCacheTTL,
+		RateLimitPerSecond: defaultRateLimitPerSecond,
+		RateLimitBurst:     defaultRateLimitBurst,
+		AuthRateLimitPerSecond: defaultAuthRateLimitPerSecond,
+		AuthRateLimitBurst:     defaultAuthRateLimitBurst,
 	}
 
 	if v := os.Getenv("ACCESS_TOKEN_TTL"); v != "" {
@@ -103,6 +121,58 @@ func Load() (Config, error) {
 			return Config{}, errors.New("USER_CACHE_TTL must be positive")
 		}
 		cfg.UserCacheTTL = d
+	}
+
+	if v := os.Getenv("RATE_LIMIT_PER_SECOND"); v != "" {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid RATE_LIMIT_PER_SECOND: %w", err)
+		}
+		if f <= 0 {
+			return Config{}, errors.New("RATE_LIMIT_PER_SECOND must be positive")
+		}
+		cfg.RateLimitPerSecond = f
+	}
+
+	if v := os.Getenv("RATE_LIMIT_BURST"); v != "" {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid RATE_LIMIT_BURST: %w", err)
+		}
+		if f <= 0 {
+			return Config{}, errors.New("RATE_LIMIT_BURST must be positive")
+		}
+		cfg.RateLimitBurst = f
+	}
+
+	if v := os.Getenv("AUTH_RATE_LIMIT_PER_SECOND"); v != "" {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid AUTH_RATE_LIMIT_PER_SECOND: %w", err)
+		}
+		if f <= 0 {
+			return Config{}, errors.New("AUTH_RATE_LIMIT_PER_SECOND must be positive")
+		}
+		cfg.AuthRateLimitPerSecond = f
+	}
+
+	if v := os.Getenv("AUTH_RATE_LIMIT_BURST"); v != "" {
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return Config{}, fmt.Errorf("invalid AUTH_RATE_LIMIT_BURST: %w", err)
+		}
+		if f <= 0 {
+			return Config{}, errors.New("AUTH_RATE_LIMIT_BURST must be positive")
+		}
+		cfg.AuthRateLimitBurst = f
+	}
+
+	if v := os.Getenv("CORS_ALLOWED_ORIGINS"); v != "" {
+		for _, o := range strings.Split(v, ",") {
+			if o = strings.TrimSpace(o); o != "" {
+				cfg.CORSAllowedOrigins = append(cfg.CORSAllowedOrigins, o)
+			}
+		}
 	}
 
 	if v := os.Getenv("BcryptCost"); v != "" {
