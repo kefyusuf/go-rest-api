@@ -8,6 +8,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	"go-lang/internal/auth"
+	"go-lang/internal/events"
 	"go-lang/internal/handler"
 	"go-lang/internal/idempotency"
 	"go-lang/internal/model"
@@ -32,6 +33,7 @@ type Options struct {
 	CORS          CORSConfig
 
 	IdempotencyStore *idempotency.MemoryStore
+	Outbox           *events.Outbox
 }
 
 func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Handler {
@@ -41,7 +43,7 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 
 	mux := http.NewServeMux()
 	healthHandler := handler.NewHealthHandler()
-	userHandler := handler.NewUserHandler(userStore, opts.BcryptCost)
+	userHandler := handler.NewUserHandler(userStore, opts.BcryptCost, opts.Outbox)
 	meHandler := handler.NewMeHandler(userStore)
 
 	authLimiter := RateLimit(RateLimitConfig{Limiter: opts.AuthLimiter})
