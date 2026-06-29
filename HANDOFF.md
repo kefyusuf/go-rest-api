@@ -70,11 +70,12 @@ The README is now a 141-line landing page that points at all five.
 
 ## Open work / known limitations
 
-- **Per-process state.** The blacklist (auth), reset-token store
-  (auth), in-memory job queue, dead-letter list, and in-memory
-  outbox are all process-local. The interface for each is
-  intentionally small so a Redis-backed or RabbitMQ-backed
-  implementation can drop in.
+- **Per-process state.** The reset-token store (auth), the
+  dead-letter list, and the in-memory outbox are process-local.
+  The blacklist, rate limiter, idempotency store, and job queue
+  are now Redis-backed when `REDIS_URL` is set. The interface for
+  the remaining in-memory state is intentionally small so a
+  Redis-backed or RabbitMQ-backed implementation can drop in.
 - **In-memory `Publisher`.** As of the most recent commit a
   `KafkaPublisher` is wired in. Set `KAFKA_BROKERS=host:9092` and
   events go to Kafka instead of the log. Leave it empty to keep the
@@ -142,11 +143,7 @@ section of `README.md` and in `docs/LAYERS.md`.
 
 If you are a maintainer coming back to this repository:
 
-1. The job queue is the remaining in-memory state with the
-   same swap pattern. The `internal/jobs` package already has a
-   `Queue` interface; a RabbitMQ-backed (or Redis-stream-backed)
-   `JobQueue` is drop-in.
-2. The outbox dispatcher is process-local. For multi-replica
+1. The outbox dispatcher is process-local. For multi-replica
    deployments back it with the same database the user store
    uses (a single `outbox` table); a small replication loop in
    `cmd/api/main.go` would replace the in-memory slice.
