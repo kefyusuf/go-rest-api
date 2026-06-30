@@ -11,6 +11,7 @@ import (
 	"go-lang/internal/events"
 	"go-lang/internal/handler"
 	"go-lang/internal/idempotency"
+	"go-lang/internal/jobs"
 	"go-lang/internal/model"
 	"go-lang/internal/observability"
 	"go-lang/internal/ratelimit"
@@ -34,6 +35,7 @@ type Options struct {
 
 	IdempotencyStore idempotency.Store
 	ResetTokens     handler.TokenStore
+	JobQueue         jobs.Queue
 	Outbox           events.Outbox
 }
 
@@ -62,6 +64,7 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 		authHandler := handler.NewAuthHandler(userStore, opts.TokenIssuer, opts.RefreshIssuer, opts.Blacklist, handler.AuthHandlerOptions{
 			BcryptCost:    opts.BcryptCost,
 			ResetTokens:   opts.ResetTokens,
+			JobQueue:      opts.JobQueue,
 		})
 
 		mux.Handle("/auth/login", authLimiter(http.HandlerFunc(authHandler.Login)))

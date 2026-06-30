@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
 	"time"
 
 	"go-lang/internal/auth"
+	"go-lang/internal/jobs"
 	"go-lang/internal/model"
 	"go-lang/internal/response"
 	"go-lang/internal/store"
@@ -22,6 +24,10 @@ type AuthHandler struct {
 	now            func() time.Time
 	resetTokenTTL  time.Duration
 	forgotDisabled bool
+	// jobQueue, if non-nil, receives a 'welcome_email' job after
+	// a successful registration. When nil, no welcome email is
+	// enqueued (the rest of the handler still works).
+	jobQueue jobs.Queue
 }
 
 type AuthHandlerOptions struct {
@@ -32,6 +38,13 @@ type AuthHandlerOptions struct {
 	// Production passes a Redis-backed TokenStore when REDIS_URL
 	// is set.
 	ResetTokens TokenStore
+	// JobQueue, if non-nil, receives a 'welcome_email' job
+	// after a successful registration. When nil, no welcome
+	// email is enqueued. The Queue is the same one the rest
+	// of the app uses (in-memory or Redis Streams), so the
+	// welcome-email job runs in the same worker pool as every
+	// other background task.
+	JobQueue jobs.Queue
 }
 
 func NewAuthHandler(userStore store.UserStore, issuer *auth.TokenIssuer, refreshIssuer *auth.TokenIssuer, blacklist auth.Blacklist, opts AuthHandlerOptions) AuthHandler {
@@ -52,6 +65,7 @@ func NewAuthHandler(userStore store.UserStore, issuer *auth.TokenIssuer, refresh
 		resetTokens:   resetTokenStore,
 		now:           time.Now,
 		resetTokenTTL: opts.ResetTokenTTL,
+		jobQueue:      opts.JobQueue,
 	}
 }
 
@@ -116,6 +130,23 @@ func (h AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	ttl := time.Until(expiresAt)
 	if ttl < 0 {
 		ttl = 0
+	}
+	// Enqueue a welcome-email job after a successful registration.
+	// The job is best-effort: a transient Queue error must not
+	// fail the user-facing response. The job payload carries
+	// the new user's id, name, and email; the worker reads it
+	// from the Job struct in main.go.
+	if h.jobQueue != nil {
+		if payload, perr := json.Marshal(map[string]any{
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+		}); perr == nil {
+			_ = h.jobQueue.Enqueue(r.Context(), jobs.Job{
+				Type:    "welcome_email",
+				Payload: payload,
+			})
+		}
 	}
 	response.JSON(w, http.StatusCreated, model.LoginResponse{
 		AccessToken:  token,
