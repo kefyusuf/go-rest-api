@@ -192,7 +192,15 @@ func main() {
 	if jobQueueClose != nil {
 		defer jobQueueClose()
 	}
-	jobDead := jobs.NewMemoryDeadLetter()
+
+	jobDead, jobDeadClose, err := buildDeadLetter(cfg, logger)
+	if err != nil {
+		logger.Error("failed to build dead-letter list", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if jobDeadClose != nil {
+		defer jobDeadClose()
+	}
 	jobReg := jobs.NewRegistry(jobQueue, jobDead, logger)
 	jobReg.Register("welcome_email", jobs.HandlerFunc(func(_ context.Context, _ jobs.Job) error {
 		logger.Info("welcome email job ran (mock)")
@@ -411,6 +419,32 @@ func buildJobQueue(cfg config.Config, logger *slog.Logger) (jobs.Queue, func(), 
 		return nil, nil, fmt.Errorf("build redis queue: %w", err)
 	}
 	return q, func() { _ = client.Close() }, nil
+}
+
+// buildDeadLetter returns the in-memory dead-letter list when
+// REDIS_URL is empty, and a Redis-backed list when it is set.
+// The Redis implementation does not own its client; the closer
+// here closes the client.
+func buildDeadLetter(cfg config.Config, logger *slog.Logger) (jobs.DeadLetter, func(), error) {
+	if cfg.RedisURL == "" {
+		return jobs.NewMemoryDeadLetter(), func() {}, nil
+	}
+	opts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid REDIS_URL for dead-letter list: %w", err)
+	}
+	client := redis.NewClient(opts)
+	pingCtx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	if err := client.Ping(pingCtx).Err(); err != nil {
+		logger.Warn("REDIS_URL set but redis is unreachable, using in-memory dead-letter list",
+			slog.String("error", err.Error()))
+		_ = client.Close()
+		return jobs.NewMemoryDeadLetter(), func() {}, nil
+	}
+	logger.Info("redis-backed dead-letter list enabled", slog.String("addr", opts.Addr))
+	dl := jobs.NewRedisDeadLetter(client)
+	return dl, func() { _ = client.Close() }, nil
 }
 
 // buildIdempotencyStore returns the in-memory store when REDIS_URL is
