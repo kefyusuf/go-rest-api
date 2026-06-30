@@ -70,12 +70,12 @@ The README is now a 141-line landing page that points at all five.
 
 ## Open work / known limitations
 
-- **Per-process state.** The reset-token store (auth) and
-  the dead-letter list (jobs) are process-local. The blacklist,
-  rate limiter, idempotency store, job queue, and outbox are
-  now durable when the matching backing service is configured:
-  blacklist / rate limiter / idempotency / job queue switch
-  to Redis when `REDIS_URL` is set; the outbox switches to a
+- **Per-process state.** The dead-letter list (jobs) is
+  process-local. The blacklist, rate limiter, idempotency store,
+  job queue, reset-token store, and outbox are now durable when
+  the matching backing service is configured: blacklist / rate
+  limiter / idempotency / job queue / reset tokens switch to
+  Redis when `REDIS_URL` is set; the outbox switches to a
   database-backed implementation (PostgreSQL, using the same
   `*sql.DB` as the user store) when `DATABASE_URL` is set. The
   interface for the remaining in-memory state is intentionally
@@ -148,13 +148,9 @@ section of `README.md` and in `docs/LAYERS.md`.
 
 If you are a maintainer coming back to this repository:
 
-1. The reset-token store and the dead-letter list are
-   process-local. For multi-replica deployments back them with
-   Redis (reset tokens are already in-memory in a single map
-   keyed by the random token; a `reset_token_blacklist` table
-   or a Redis SET with a TTL is the drop-in). The dead-letter
-   list is a simple in-memory slice today; the same `database/sql`
-   pattern used for the outbox would work.
+1. The dead-letter list is process-local. For multi-replica
+   deployments back it with Redis or the same database the outbox
+   uses; the drop-in follows the same pattern as the outbox.
 2. The `welcome_email` job is a mock. Replace the registration in
    `cmd/api/main.go` with a real handler (SendGrid / Resend / SES)
    once you have credentials.

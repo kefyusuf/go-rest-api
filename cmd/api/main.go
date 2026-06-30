@@ -17,6 +17,7 @@ import (
 	"go-lang/internal/config"
 	"go-lang/internal/database"
 	"go-lang/internal/events"
+	"go-lang/internal/handler"
 	"go-lang/internal/idempotency"
 	"go-lang/internal/jobs"
 	"go-lang/internal/observability"
@@ -85,6 +86,15 @@ func main() {
 	}
 	if blacklistClose != nil {
 		defer blacklistClose()
+	}
+
+	resetTokenStore, resetTokenClose, err := buildResetTokenStore(cfg, logger)
+	if err != nil {
+		logger.Error("failed to build reset-token store", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	if resetTokenClose != nil {
+		defer resetTokenClose()
 	}
 	if err != nil {
 		logger.Error("failed to build cache", slog.String("error", err.Error()))
@@ -167,6 +177,7 @@ func main() {
 		GlobalLimiter:   globalLimiter,
 		AuthLimiter:     authLimiter,
 		IdempotencyStore: idempStore,
+		ResetTokens:     resetTokenStore,
 		Outbox:           outbox,
 		CORS: server.CORSConfig{
 			AllowedOrigins: cfg.CORSAllowedOrigins,
@@ -425,5 +436,31 @@ func buildIdempotencyStore(cfg config.Config, logger *slog.Logger) (idempotency.
 	}
 	logger.Info("redis-backed idempotency store enabled", slog.String("addr", opts.Addr))
 	store := idempotency.NewRedisStore(client, cfg.IdempotencyTTL)
+	return store, func() { _ = client.Close() }, nil
+}
+
+// buildResetTokenStore returns the in-memory implementation when
+// REDIS_URL is empty, and a Redis-backed implementation when it
+// is set. The Redis implementation does not own its client; the
+// closer here closes the client.
+func buildResetTokenStore(cfg config.Config, logger *slog.Logger) (handler.TokenStore, func(), error) {
+	if cfg.RedisURL == "" {
+		return handler.NewMemoryResetTokenStore(), func() {}, nil
+	}
+	opts, err := redis.ParseURL(cfg.RedisURL)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid REDIS_URL for reset-token store: %w", err)
+	}
+	client := redis.NewClient(opts)
+	pingCtx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	if err := client.Ping(pingCtx).Err(); err != nil {
+		logger.Warn("REDIS_URL set but redis is unreachable, using in-memory reset-token store",
+			slog.String("error", err.Error()))
+		_ = client.Close()
+		return handler.NewMemoryResetTokenStore(), func() {}, nil
+	}
+	logger.Info("redis-backed reset-token store enabled", slog.String("addr", opts.Addr))
+	store := handler.NewRedisResetTokenStore(client)
 	return store, func() { _ = client.Close() }, nil
 }

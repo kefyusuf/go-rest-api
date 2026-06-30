@@ -54,9 +54,17 @@ func TestDBOutboxEnqueueDequeueMarkPublished(t *testing.T) {
 		t.Fatalf("ensure schema: %v", err)
 	}
 
+	// Wipe the table between tests so each test sees only its
+	// own rows. The events_outbox table is global; without this
+	// a row from a previous test would be the first one Dequeue
+	// returns and the assertion that the id matches the one we
+	// just enqueued would fail.
+	if _, err := db.ExecContext(ctx, `DELETE FROM events_outbox`); err != nil {
+		t.Fatalf("clear outbox: %v", err)
+	}
+	defer db.ExecContext(ctx, `DELETE FROM events_outbox`)
+
 	id := "test-" + time.Now().Format("150405.000000000")
-	// Clean up any leftover row from a previous run.
-	defer db.ExecContext(ctx, `DELETE FROM events_outbox WHERE id = $1`, id)
 
 	event := events.Event{
 		ID:         id,

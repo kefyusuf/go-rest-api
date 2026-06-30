@@ -105,8 +105,10 @@ func TestRedisStoreTTLExpire(t *testing.T) {
 		t.Fatalf("expected immediate hit, got %v", err)
 	}
 
-	// Wait past the TTL.
-	time.Sleep(400 * time.Millisecond)
+	// Wait past the TTL. Redis's minimum EXPIRE TTL is 1s, so the
+	// tiny 250ms input gets truncated. Sleep just over a second
+	// to be safe across a slow test machine.
+	time.Sleep(1100 * time.Millisecond)
 
 	// Lookups after expiry must be a clean miss.
 	_, err := store.Lookup(context.Background(), key, hash)

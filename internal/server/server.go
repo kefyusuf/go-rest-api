@@ -33,6 +33,7 @@ type Options struct {
 	CORS          CORSConfig
 
 	IdempotencyStore idempotency.Store
+	ResetTokens     handler.TokenStore
 	Outbox           events.Outbox
 }
 
@@ -59,7 +60,8 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 
 	if opts.TokenIssuer != nil && opts.RefreshIssuer != nil && opts.Blacklist != nil {
 		authHandler := handler.NewAuthHandler(userStore, opts.TokenIssuer, opts.RefreshIssuer, opts.Blacklist, handler.AuthHandlerOptions{
-			BcryptCost: opts.BcryptCost,
+			BcryptCost:    opts.BcryptCost,
+			ResetTokens:   opts.ResetTokens,
 		})
 
 		mux.Handle("/auth/login", authLimiter(http.HandlerFunc(authHandler.Login)))
