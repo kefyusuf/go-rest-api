@@ -70,17 +70,14 @@ The README is now a 141-line landing page that points at all five.
 
 ## Open work / known limitations
 
-- **Per-process state.** The dead-letter list (jobs) is
-  process-local. The blacklist, rate limiter, idempotency store,
-  job queue, reset-token store, and outbox are now durable when
-  the matching backing service is configured: blacklist / rate
-  limiter / idempotency / job queue / reset tokens switch to
-  Redis when `REDIS_URL` is set; the outbox switches to a
-  database-backed implementation (PostgreSQL, using the same
-  `*sql.DB` as the user store) when `DATABASE_URL` is set. The
-  interface for the remaining in-memory state is intentionally
-  small so a Redis-backed or RabbitMQ-backed implementation can
-  drop in.
+- **Per-process state.** None. Every stateful store is now
+  backed by a configurable durable backend. The blacklist, rate
+  limiter, idempotency store, job queue, reset-token store, and
+  dead-letter list switch to Redis when `REDIS_URL` is set; the
+  outbox switches to a database-backed implementation (PostgreSQL,
+  using the same `*sql.DB` as the user store) when `DATABASE_URL`
+  is set. Empty in-memory fallbacks are kept for single-instance
+  development.
 - **In-memory `Publisher`.** As of the most recent commit a
   `KafkaPublisher` is wired in. Set `KAFKA_BROKERS=host:9092` and
   events go to Kafka instead of the log. Leave it empty to keep the
@@ -148,10 +145,7 @@ section of `README.md` and in `docs/LAYERS.md`.
 
 If you are a maintainer coming back to this repository:
 
-1. The dead-letter list is process-local. For multi-replica
-   deployments back it with Redis or the same database the outbox
-   uses; the drop-in follows the same pattern as the outbox.
-2. The `welcome_email` job is a mock. Replace the registration in
+1. The `welcome_email` job is a mock. Replace the registration in
    `cmd/api/main.go` with a real handler (SendGrid / Resend / SES)
    once you have credentials.
 3. CI is wired but the `ci.yml` only exists on the layer branches
