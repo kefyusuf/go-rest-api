@@ -9,9 +9,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
+	"go-lang/internal/auth"
 	"go-lang/internal/database"
 	"go-lang/internal/model"
 	"go-lang/internal/server"
@@ -32,13 +34,19 @@ func TestUsersCRUDFlowWithPostgres(t *testing.T) {
 		t.Fatalf("run migrations failed: %v", err)
 	}
 
-	app := server.New(store.NewPostgresUserStore(db), newTestLogger(), server.Options{})
+	access, _ := auth.NewTokenIssuer(testJWTSecret, 15*time.Minute, "test", auth.KindAccess)
+	_ = access
+	app := server.New(store.NewPostgresUserStore(db), newTestLogger(), server.Options{
+		TokenIssuer:     access,
+		BcryptCost:      4,
+	})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
 	created := createPostgresUser(t, ts.URL, model.CreateUserRequest{
 		Name:  "Ada Lovelace",
 		Email: "ada@example.com",
+		Password: "correct-password",
 	})
 
 	fetched := getPostgresUser(t, ts.URL, created.ID)
@@ -81,18 +89,25 @@ func TestUsersDuplicateEmailWithPostgresReturnsConflict(t *testing.T) {
 		t.Fatalf("run migrations failed: %v", err)
 	}
 
-	app := server.New(store.NewPostgresUserStore(db), newTestLogger(), server.Options{})
+	access, _ := auth.NewTokenIssuer(testJWTSecret, 15*time.Minute, "test", auth.KindAccess)
+	_ = access
+	app := server.New(store.NewPostgresUserStore(db), newTestLogger(), server.Options{
+		TokenIssuer:     access,
+		BcryptCost:      4,
+	})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
 	createPostgresUser(t, ts.URL, model.CreateUserRequest{
 		Name:  "Ada Lovelace",
 		Email: "ada@example.com",
+		Password: "correct-password",
 	})
 
 	res, err := http.Post(ts.URL+"/users", "application/json", bytes.NewReader(mustPostgresJSON(t, model.CreateUserRequest{
 		Name:  "Grace Hopper",
 		Email: "ada@example.com",
+		Password: "correct-password",
 	})))
 	if err != nil {
 		t.Fatalf("duplicate create request failed: %v", err)

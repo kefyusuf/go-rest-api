@@ -7,17 +7,30 @@ import (
 	"time"
 )
 
+// TokenStore is the contract every password-reset token store must
+// satisfy. Tokens are short opaque hex strings with a per-token
+// expiry. Issue returns the token and its expiry; Consume is
+// single-use (the entry is deleted whether the call succeeded or
+// failed) and reports the user id the token was issued for.
+type TokenStore interface {
+	Issue(userID int64, now func() time.Time, ttl time.Duration) (string, time.Time)
+	Consume(token string, now func() time.Time) (int64, bool)
+}
+
 type resetToken struct {
 	userID    int64
 	expiresAt time.Time
 }
 
 type resetTokenStore struct {
-	mu      sync.Mutex
-	tokens  map[string]resetToken
+	mu     sync.Mutex
+	tokens map[string]resetToken
 }
 
-func newResetTokenStore() *resetTokenStore {
+// NewMemoryResetTokenStore returns a fresh in-memory
+// implementation. The exported name makes it a drop-in
+// counterpart of NewRedisResetTokenStore at the call site.
+func NewMemoryResetTokenStore() *resetTokenStore {
 	return &resetTokenStore{tokens: make(map[string]resetToken)}
 }
 
