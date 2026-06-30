@@ -16,6 +16,7 @@ import (
 	cacheimpl "go-lang/internal/cache"
 	"go-lang/internal/config"
 	"go-lang/internal/database"
+	"go-lang/internal/email"
 	"go-lang/internal/events"
 	"go-lang/internal/handler"
 	"go-lang/internal/idempotency"
@@ -497,4 +498,21 @@ func buildResetTokenStore(cfg config.Config, logger *slog.Logger) (handler.Token
 	logger.Info("redis-backed reset-token store enabled", slog.String("addr", opts.Addr))
 	store := handler.NewRedisResetTokenStore(client)
 	return store, func() { _ = client.Close() }, nil
+}
+
+// buildEmailSender returns an SMTPSender when SMTP_HOST (and the
+// other SMTP_* fields) is set, and a LogSender otherwise. The
+// default in development is the log sender so the API does not
+// depend on an external mail service just to start.
+func buildEmailSender(logger *slog.Logger) email.Sender {
+	cfg, ok := email.NewSMTPConfigFromEnv(os.Getenv)
+	if !ok {
+		logger.Info("SMTP_HOST not set, using in-memory LogSender (no email is actually sent)")
+		return email.NewLogSender(logger)
+	}
+	logger.Info("smtp email sender enabled",
+		slog.String("host", cfg.Host),
+		slog.Int("port", cfg.Port),
+		slog.String("from", cfg.FromAddress))
+	return email.NewSMTPSender(cfg, logger)
 }

@@ -256,6 +256,13 @@ sh scripts/test-db-down.sh
 | `KAFKA_BROKERS` | API application | empty | Comma-separated list of Kafka brokers. When set, the event publisher switches from the in-memory logger to a Kafka writer. Empty keeps the in-process publisher. |
 | `KAFKA_TOPIC` | API application | `go-rest-api.events` | Default topic for events when the per-event Topic is empty. |
 | `KAFKA_WRITE_TIMEOUT` | API application | `10s` | Per-write timeout for the Kafka writer. |
+| `SMTP_HOST` | API application | empty | Hostname of the SMTP server used by the `welcome_email` job. When set (together with `SMTP_USER`, `SMTP_PASSWORD`, and `SMTP_FROM`), the job uses an `SMTPSender`; otherwise the message is logged by the `LogSender`. |
+| `SMTP_PORT` | API application | `587` | SMTP server port. |
+| `SMTP_USER` | API application | empty | SMTP authentication username. |
+| `SMTP_PASSWORD` | API application | empty | SMTP authentication password. |
+| `SMTP_FROM` | API application | empty | The From: address the API sends from. |
+| `SMTP_STARTTLS` | API application | `true` | When true, upgrade the SMTP connection to TLS. Set to `false` only for local development with a plain-text SMTP. |
+| `SMTP_TIMEOUT` | API application | `10s` | Per-call SMTP timeout. |
 
 ---
 
