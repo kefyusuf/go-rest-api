@@ -145,17 +145,25 @@ section of `README.md` and in `docs/LAYERS.md`.
 
 If you are a maintainer coming back to this repository:
 
-1. The `welcome_email` job is a mock. Replace the registration in
-   `cmd/api/main.go` with a real handler (SendGrid / Resend / SES)
-   once you have credentials.
-3. CI is wired but the `ci.yml` only exists on the layer branches
+1. The `welcome_email` job is registered with a working
+   handler but is never enqueued from the request path yet. Wire
+   it into the register handler (or a post-commit hook) so the
+   new user actually receives a welcome email. The handler
+   already calls `emailSender.Send(...)` and falls back to the
+   `LogSender` when `SMTP_HOST` is not set, so the
+   in-development flow works without an external mail server.
+2. The `welcome_email` handler currently only logs or sends a
+    plain-text body. A real product would template a nice HTML
+    email and choose between transactional providers (Postmark,
+    Mailgun, SES) by env.
+4. CI is wired but the `ci.yml` only exists on the layer branches
    and on the most recent `main` commits. If you rebase an old
    layer branch, the workflow will be missing — re-add it from a
    later commit if you push that branch.
-4. The Kubernetes manifests and Helm chart in `deploy/` have not
+5. The Kubernetes manifests and Helm chart in `deploy/` have not
    been exercised against a real cluster. The compose stack on
    the local dev machine is the only end-to-end verification today.
-5. The Swagger output is OpenAPI 2.0. A future layer could
+6. The Swagger output is OpenAPI 2.0. A future layer could
    switch to `oapi-codegen` or `kin-openapi` for OpenAPI 3.1.
 
 ## Files of interest
