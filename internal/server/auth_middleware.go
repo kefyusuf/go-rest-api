@@ -12,7 +12,7 @@ import (
 
 const userIDCtxKey ctxKey = 100
 
-func RequireAuth(issuer *auth.TokenIssuer, blacklist *auth.Blacklist) func(http.Handler) http.Handler {
+func RequireAuth(issuer *auth.TokenIssuer, blacklist auth.Blacklist) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			raw := r.Header.Get("Authorization")

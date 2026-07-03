@@ -16,9 +16,9 @@ type AuthHandler struct {
 	store          store.UserStore
 	issuer         *auth.TokenIssuer
 	refreshIssuer  *auth.TokenIssuer
-	blacklist      *auth.Blacklist
+	blacklist      auth.Blacklist
 	bcryptCost     int
-	resetTokens    *resetTokenStore
+	resetTokens    TokenStore
 	now            func() time.Time
 	resetTokenTTL  time.Duration
 	forgotDisabled bool
@@ -27,19 +27,29 @@ type AuthHandler struct {
 type AuthHandlerOptions struct {
 	BcryptCost    int
 	ResetTokenTTL time.Duration
+	// ResetTokens, if non-nil, is used for password-reset token
+	// storage. When nil, the in-memory implementation is used.
+	// Production passes a Redis-backed TokenStore when REDIS_URL
+	// is set.
+	ResetTokens TokenStore
 }
 
-func NewAuthHandler(userStore store.UserStore, issuer *auth.TokenIssuer, refreshIssuer *auth.TokenIssuer, blacklist *auth.Blacklist, opts AuthHandlerOptions) AuthHandler {
+func NewAuthHandler(userStore store.UserStore, issuer *auth.TokenIssuer, refreshIssuer *auth.TokenIssuer, blacklist auth.Blacklist, opts AuthHandlerOptions) AuthHandler {
 	if opts.ResetTokenTTL <= 0 {
 		opts.ResetTokenTTL = time.Hour
 	}
+	resetTokenStore := opts.ResetTokens
+	if resetTokenStore == nil {
+		resetTokenStore = NewMemoryResetTokenStore()
+	}
+
 	return AuthHandler{
 		store:         userStore,
 		issuer:        issuer,
 		refreshIssuer: refreshIssuer,
 		blacklist:     blacklist,
 		bcryptCost:    opts.BcryptCost,
-		resetTokens:   newResetTokenStore(),
+		resetTokens:   resetTokenStore,
 		now:           time.Now,
 		resetTokenTTL: opts.ResetTokenTTL,
 	}
