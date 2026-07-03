@@ -3,6 +3,16 @@
 // for a bounded TTL, so a retried request with the same key and the
 // same request body returns the same response without re-running
 // the underlying handler.
+//
+// Two implementations live behind the Store interface:
+//
+//   - MemoryStore (this file): a per-process map. Lost on restart
+//     and not shared across replicas. Use it for single-instance
+//     development.
+//   - RedisStore (redis.go): a Redis-backed implementation that
+//     shares the cache across replicas. Each entry is a single
+//     Redis hash with a per-key EX TTL so the cache cannot grow
+//     without bound.
 package idempotency
 
 import (
@@ -33,8 +43,17 @@ type Entry struct {
 type Store interface {
 	Lookup(ctx context.Context, key, requestHash string) (Entry, error)
 	Save(ctx context.Context, key, requestHash string, status int, body []byte, contentType string) error
+	// Run is a convenience: lookup the key, call do if missing,
+	// then save the result. The boolean return reports whether
+	// the result was a replay (true) or a fresh execution
+	// (false). The middleware uses Run to keep the same control
+	// flow across both the in-memory and the Redis implementations.
+	Run(ctx context.Context, key string, request []byte, do DoFunc) (Entry, bool, error)
 }
 
+// MemoryStore is the in-process implementation. It is exported
+// under its concrete name for backwards compatibility with call
+// sites that pass *MemoryStore.
 type MemoryStore = memoryStore
 
 type memoryStore struct {
@@ -122,16 +141,10 @@ func (s *memoryStore) gc() int {
 	return removed
 }
 
-// Wrap runs handler(idempotent) once for the given key, caching the
-// response. The handler is called via the supplied do function. If
-// the key was seen before with the same body, do is not called and
-// the cached response is returned. If the key was seen with a
-// different body, ErrConflict is returned and do is not called.
-//
-// do receives the request body bytes and must return the status
-// code, response body, and content type to cache.
-type DoFunc func(ctx context.Context) (status int, body []byte, contentType string, err error)
-
+// Run is a convenience wrapper around Lookup + Save + do. It exists
+// only on MemoryStore because the middleware uses the Store
+// interface and does not need a Run method. Implementations that
+// want a single round-trip helper can add their own.
 func (s *memoryStore) Run(ctx context.Context, key string, request []byte, do DoFunc) (Entry, bool, error) {
 	requestHash := HashRequest(request)
 
@@ -162,6 +175,10 @@ func (s *memoryStore) Run(ctx context.Context, key string, request []byte, do Do
 		StoredAt:    s.now(),
 	}, false, nil
 }
+
+// DoFunc is the signature of the inner handler that the idempotency
+// wrapper invokes. The wrapper passes the result back to the cache.
+type DoFunc func(ctx context.Context) (status int, body []byte, contentType string, err error)
 
 // EqualBytes is a small helper that returns true when a and b have
 // the same content.

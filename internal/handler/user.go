@@ -21,10 +21,10 @@ import (
 type UserHandler struct {
 	store      store.UserStore
 	bcryptCost int
-	outbox     *events.Outbox
+	outbox     events.Outbox
 }
 
-func NewUserHandler(store store.UserStore, bcryptCost int, outbox *events.Outbox) UserHandler {
+func NewUserHandler(store store.UserStore, bcryptCost int, outbox events.Outbox) UserHandler {
 	return UserHandler{store: store, bcryptCost: bcryptCost, outbox: outbox}
 }
 

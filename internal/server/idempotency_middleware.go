@@ -17,7 +17,7 @@ import (
 const idempotencyTimeout = 5 * time.Second
 
 type IdempotencyOptions struct {
-	Store *idempotency.MemoryStore
+	Store idempotency.Store
 	Now   func() time.Time
 }
 
