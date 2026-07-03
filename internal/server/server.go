@@ -22,18 +22,19 @@ type Options struct {
 	MaxBodyBytes  int64
 	TokenIssuer   *auth.TokenIssuer
 	RefreshIssuer *auth.TokenIssuer
-	Blacklist     *auth.Blacklist
+	Blacklist     auth.Blacklist
 	BcryptCost    int
 	Metrics       *observability.Metrics
 	HealthProbes  *observability.HealthProbes
 	DBPinger      observability.Pinger
 
-	GlobalLimiter *ratelimit.Limiter
-	AuthLimiter   *ratelimit.Limiter
+	GlobalLimiter ratelimit.Limiter
+	AuthLimiter   ratelimit.Limiter
 	CORS          CORSConfig
 
-	IdempotencyStore *idempotency.MemoryStore
-	Outbox           *events.Outbox
+	IdempotencyStore idempotency.Store
+	ResetTokens     handler.TokenStore
+	Outbox           events.Outbox
 }
 
 func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Handler {
@@ -59,7 +60,8 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 
 	if opts.TokenIssuer != nil && opts.RefreshIssuer != nil && opts.Blacklist != nil {
 		authHandler := handler.NewAuthHandler(userStore, opts.TokenIssuer, opts.RefreshIssuer, opts.Blacklist, handler.AuthHandlerOptions{
-			BcryptCost: opts.BcryptCost,
+			BcryptCost:    opts.BcryptCost,
+			ResetTokens:   opts.ResetTokens,
 		})
 
 		mux.Handle("/auth/login", authLimiter(http.HandlerFunc(authHandler.Login)))
