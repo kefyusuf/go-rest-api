@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -24,10 +26,11 @@ type AuthHandler struct {
 	now            func() time.Time
 	resetTokenTTL  time.Duration
 	forgotDisabled bool
+	logger         *slog.Logger
 	// jobQueue, if non-nil, receives a 'welcome_email' job after
 	// a successful registration. When nil, no welcome email is
 	// enqueued (the rest of the handler still works).
-	jobQueue jobs.Queue
+	jobQueue jobs.Enqueuer
 }
 
 type AuthHandlerOptions struct {
@@ -40,11 +43,11 @@ type AuthHandlerOptions struct {
 	ResetTokens TokenStore
 	// JobQueue, if non-nil, receives a 'welcome_email' job
 	// after a successful registration. When nil, no welcome
-	// email is enqueued. The Queue is the same one the rest
-	// of the app uses (in-memory or Redis Streams), so the
-	// welcome-email job runs in the same worker pool as every
-	// other background task.
-	JobQueue jobs.Queue
+	// email is enqueued. It should apply the same job defaults
+	// as the worker registry so the welcome-email job runs in
+	// the same worker pool as every other background task.
+	JobQueue jobs.Enqueuer
+	Logger   *slog.Logger
 }
 
 func NewAuthHandler(userStore store.UserStore, issuer *auth.TokenIssuer, refreshIssuer *auth.TokenIssuer, blacklist auth.Blacklist, opts AuthHandlerOptions) AuthHandler {
@@ -54,6 +57,10 @@ func NewAuthHandler(userStore store.UserStore, issuer *auth.TokenIssuer, refresh
 	resetTokenStore := opts.ResetTokens
 	if resetTokenStore == nil {
 		resetTokenStore = NewMemoryResetTokenStore()
+	}
+	logger := opts.Logger
+	if logger == nil {
+		logger = slog.Default()
 	}
 
 	return AuthHandler{
@@ -65,6 +72,7 @@ func NewAuthHandler(userStore store.UserStore, issuer *auth.TokenIssuer, refresh
 		resetTokens:   resetTokenStore,
 		now:           time.Now,
 		resetTokenTTL: opts.ResetTokenTTL,
+		logger:        logger,
 		jobQueue:      opts.JobQueue,
 	}
 }
@@ -137,24 +145,28 @@ func (h AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	// the new user's id, name, and email; the worker reads it
 	// from the Job struct in main.go.
 	if h.jobQueue != nil {
-		if payload, perr := json.Marshal(map[string]any{
+		payload, perr := json.Marshal(map[string]any{
 			"id":    user.ID,
 			"name":  user.Name,
 			"email": user.Email,
-		}); perr == nil {
-			_ = h.jobQueue.Enqueue(r.Context(), jobs.Job{
-				Type:    "welcome_email",
-				Payload: payload,
-			})
+		})
+		if perr != nil {
+			h.logger.Warn("welcome email payload marshal failed", slog.String("error", perr.Error()))
+		} else {
+			enqCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+			if err := h.jobQueue.Enqueue(enqCtx, "welcome_email", payload); err != nil {
+				h.logger.Warn("welcome email enqueue failed", slog.String("error", err.Error()))
+			}
 		}
 	}
 	response.JSON(w, http.StatusCreated, model.LoginResponse{
-		AccessToken:  token,
-		RefreshToken: refreshToken,
-		TokenType:    "Bearer",
-		ExpiresIn:    int64(ttl.Seconds()),
-		ExpiresAt:    expiresAt,
-		User:         user,
+		AccessToken:      token,
+		RefreshToken:     refreshToken,
+		TokenType:        "Bearer",
+		ExpiresIn:        int64(ttl.Seconds()),
+		ExpiresAt:        expiresAt,
+		User:             user,
 		RefreshExpiresAt: refreshExpiresAt,
 	})
 }
@@ -216,12 +228,12 @@ func (h AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		ttl = 0
 	}
 	response.JSON(w, http.StatusOK, model.LoginResponse{
-		AccessToken:       token,
-		RefreshToken:      refreshToken,
-		TokenType:         "Bearer",
-		ExpiresIn:         int64(ttl.Seconds()),
-		ExpiresAt:         expiresAt,
-		User:              user,
+		AccessToken:      token,
+		RefreshToken:     refreshToken,
+		TokenType:        "Bearer",
+		ExpiresIn:        int64(ttl.Seconds()),
+		ExpiresAt:        expiresAt,
+		User:             user,
 		RefreshExpiresAt: refreshExpiresAt,
 	})
 }
@@ -324,12 +336,12 @@ func (h AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		ttl = 0
 	}
 	response.JSON(w, http.StatusOK, model.LoginResponse{
-		AccessToken:       token,
-		RefreshToken:      newRefresh,
-		TokenType:         "Bearer",
-		ExpiresIn:         int64(ttl.Seconds()),
-		ExpiresAt:         expiresAt,
-		User:              user,
+		AccessToken:      token,
+		RefreshToken:     newRefresh,
+		TokenType:        "Bearer",
+		ExpiresIn:        int64(ttl.Seconds()),
+		ExpiresAt:        expiresAt,
+		User:             user,
 		RefreshExpiresAt: newRefreshExpiresAt,
 	})
 }
@@ -380,10 +392,10 @@ func (h AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	token, expiresAt := h.resetTokens.Issue(int64(user.ID), h.now, h.resetTokenTTL)
 
 	response.JSON(w, http.StatusAccepted, model.ForgotPasswordResponse{
-		Accepted:   true,
-		Token:      token,
-		ExpiresAt:  expiresAt,
-		ResetURL:   "/auth/reset-password",
+		Accepted:  true,
+		Token:     token,
+		ExpiresAt: expiresAt,
+		ResetURL:  "/auth/reset-password",
 	})
 }
 

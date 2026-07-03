@@ -2,16 +2,20 @@ package server_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 
 	"go-lang/internal/auth"
+	"go-lang/internal/jobs"
 	"go-lang/internal/model"
 	"go-lang/internal/server"
 	"go-lang/internal/store"
@@ -34,7 +38,43 @@ func jwtMintExpired(t *testing.T, secret string) string {
 	return signed
 }
 
+type recordedJobEnqueue struct {
+	jobType     string
+	payload     []byte
+	hasDeadline bool
+	err         error
+}
+
+type recordingJobEnqueuer struct {
+	mu    sync.Mutex
+	calls []recordedJobEnqueue
+	err   error
+}
+
+func (q *recordingJobEnqueuer) Enqueue(ctx context.Context, jobType string, payload []byte) error {
+	_, hasDeadline := ctx.Deadline()
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.calls = append(q.calls, recordedJobEnqueue{
+		jobType:     jobType,
+		payload:     append([]byte(nil), payload...),
+		hasDeadline: hasDeadline,
+		err:         q.err,
+	})
+	return q.err
+}
+
+func (q *recordingJobEnqueuer) snapshot() []recordedJobEnqueue {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return append([]recordedJobEnqueue(nil), q.calls...)
+}
+
 func newAuthApp(t *testing.T) (*httptest.Server, *auth.TokenIssuer, *auth.TokenIssuer, auth.Blacklist, store.UserStore) {
+	return newAuthAppWithJobs(t, nil)
+}
+
+func newAuthAppWithJobs(t *testing.T, jobQueue jobs.Enqueuer) (*httptest.Server, *auth.TokenIssuer, *auth.TokenIssuer, auth.Blacklist, store.UserStore) {
 	t.Helper()
 	userStore := store.NewMemoryUserStore()
 	issuer, err := auth.NewTokenIssuer(testJWTSecret, 15*time.Minute, "test", auth.KindAccess)
@@ -52,6 +92,7 @@ func newAuthApp(t *testing.T) (*httptest.Server, *auth.TokenIssuer, *auth.TokenI
 		TokenIssuer:   issuer,
 		RefreshIssuer: refresh,
 		Blacklist:     blacklist,
+		JobQueue:      jobQueue,
 	})
 	ts := httptest.NewServer(app)
 	return ts, issuer, refresh, blacklist, userStore
@@ -80,6 +121,84 @@ func seedUser(t *testing.T, ts *httptest.Server, name, email, password string) m
 	var user model.User
 	decodeJSON(t, res.Body, &user)
 	return user
+}
+
+func TestRegisterEnqueuesWelcomeEmailJob(t *testing.T) {
+	jobQueue := &recordingJobEnqueuer{}
+	ts, _, _, _, _ := newAuthAppWithJobs(t, jobQueue)
+	defer ts.Close()
+
+	body, _ := json.Marshal(model.CreateUserRequest{
+		Name:     "Grace Hopper",
+		Email:    "Grace@Example.COM",
+		Password: "correct-horse-battery-staple",
+	})
+	res, err := http.Post(ts.URL+"/auth/register", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", res.StatusCode)
+	}
+
+	calls := jobQueue.snapshot()
+	if len(calls) != 1 {
+		t.Fatalf("expected 1 welcome email job, got %d", len(calls))
+	}
+	if calls[0].jobType != "welcome_email" {
+		t.Fatalf("expected welcome_email job, got %q", calls[0].jobType)
+	}
+	if !calls[0].hasDeadline {
+		t.Fatal("expected enqueue context to have a deadline")
+	}
+
+	var payload struct {
+		ID    int    `json:"id"`
+		Name  string `json:"name"`
+		Email string `json:"email"`
+	}
+	if err := json.Unmarshal(calls[0].payload, &payload); err != nil {
+		t.Fatalf("decode job payload: %v", err)
+	}
+	if payload.ID == 0 {
+		t.Fatal("expected payload user id")
+	}
+	if payload.Name != "Grace Hopper" {
+		t.Fatalf("expected payload name Grace Hopper, got %q", payload.Name)
+	}
+	if payload.Email != "grace@example.com" {
+		t.Fatalf("expected lower-cased email, got %q", payload.Email)
+	}
+}
+
+func TestRegisterDoesNotFailWhenWelcomeEmailEnqueueFails(t *testing.T) {
+	jobQueue := &recordingJobEnqueuer{err: errors.New("queue unavailable")}
+	ts, _, _, _, _ := newAuthAppWithJobs(t, jobQueue)
+	defer ts.Close()
+
+	body, _ := json.Marshal(model.CreateUserRequest{
+		Name:     "Ada Lovelace",
+		Email:    "ada-register@example.com",
+		Password: "correct-horse-battery-staple",
+	})
+	res, err := http.Post(ts.URL+"/auth/register", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", res.StatusCode)
+	}
+	calls := jobQueue.snapshot()
+	if len(calls) != 1 {
+		t.Fatalf("expected 1 enqueue attempt, got %d", len(calls))
+	}
+	if calls[0].err == nil {
+		t.Fatal("expected recorded enqueue error")
+	}
 }
 
 func TestLoginHappyPath(t *testing.T) {

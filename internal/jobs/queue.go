@@ -35,6 +35,10 @@ func (f HandlerFunc) Handle(ctx context.Context, job Job) error {
 	return f(ctx, job)
 }
 
+type Enqueuer interface {
+	Enqueue(ctx context.Context, jobType string, payload []byte) error
+}
+
 type Queue interface {
 	Enqueue(ctx context.Context, job Job) error
 	Dequeue(ctx context.Context) (Job, bool, error)
@@ -56,10 +60,10 @@ type DeadLetterEntry struct {
 }
 
 type memoryQueue struct {
-	mu       sync.Mutex
-	cond     *sync.Cond
-	items    []Job
-	closed   bool
+	mu     sync.Mutex
+	cond   *sync.Cond
+	items  []Job
+	closed bool
 }
 
 func NewMemoryQueue() *memoryQueue {

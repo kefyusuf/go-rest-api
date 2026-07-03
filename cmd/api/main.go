@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"fmt"
 	_ "go-lang/docs"
 	"go-lang/internal/auth"
 	cacheimpl "go-lang/internal/cache"
@@ -26,7 +27,6 @@ import (
 	"go-lang/internal/ratelimit"
 	"go-lang/internal/server"
 	"go-lang/internal/store"
-	"fmt"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -166,10 +166,8 @@ func main() {
 	defer cancelDispatcher()
 	go dispatcher.Run(dispatcherCtx)
 
-	// Job queue must be available before server.New so that the
-	// auth handler can enqueue a welcome_email job on registration.
-	// The worker goroutines start after server.New — the queue is
-	// durable (Redis Streams), so no job is lost during that window.
+	// Job queue and registry must be available before server.New so that the
+	// auth handler enqueues welcome_email jobs through the standard defaults.
 	jobQueue, jobQueueClose, err := buildJobQueue(cfg, logger)
 	if err != nil {
 		logger.Error("failed to build job queue", slog.String("error", err.Error()))
@@ -210,20 +208,20 @@ func main() {
 
 	addr := ":" + cfg.Port
 	app := server.New(cachedStore, logger, server.Options{
-		MaxBodyBytes:    cfg.MaxBodyBytes,
-		TokenIssuer:     issuer,
-		RefreshIssuer:   refreshIssuer,
-		Blacklist:       blacklist,
-		BcryptCost:      cfg.BcryptCost,
-		Metrics:         metrics,
-		HealthProbes:    probes,
-		DBPinger:        pinger,
-		GlobalLimiter:   globalLimiter,
-		AuthLimiter:     authLimiter,
+		MaxBodyBytes:     cfg.MaxBodyBytes,
+		TokenIssuer:      issuer,
+		RefreshIssuer:    refreshIssuer,
+		Blacklist:        blacklist,
+		BcryptCost:       cfg.BcryptCost,
+		Metrics:          metrics,
+		HealthProbes:     probes,
+		DBPinger:         pinger,
+		GlobalLimiter:    globalLimiter,
+		AuthLimiter:      authLimiter,
 		IdempotencyStore: idempStore,
-		ResetTokens:     resetTokenStore,
+		ResetTokens:      resetTokenStore,
 		Outbox:           outbox,
-		JobQueue:         jobQueue,
+		JobQueue:         jobReg,
 		CORS: server.CORSConfig{
 			AllowedOrigins: cfg.CORSAllowedOrigins,
 		},
