@@ -11,6 +11,7 @@ import (
 	"go-lang/internal/events"
 	"go-lang/internal/handler"
 	"go-lang/internal/idempotency"
+	"go-lang/internal/jobs"
 	"go-lang/internal/model"
 	"go-lang/internal/observability"
 	"go-lang/internal/ratelimit"
@@ -33,7 +34,8 @@ type Options struct {
 	CORS          CORSConfig
 
 	IdempotencyStore idempotency.Store
-	ResetTokens     handler.TokenStore
+	ResetTokens      handler.TokenStore
+	JobQueue         jobs.Enqueuer
 	Outbox           events.Outbox
 }
 
@@ -60,8 +62,10 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 
 	if opts.TokenIssuer != nil && opts.RefreshIssuer != nil && opts.Blacklist != nil {
 		authHandler := handler.NewAuthHandler(userStore, opts.TokenIssuer, opts.RefreshIssuer, opts.Blacklist, handler.AuthHandlerOptions{
-			BcryptCost:    opts.BcryptCost,
-			ResetTokens:   opts.ResetTokens,
+			BcryptCost:  opts.BcryptCost,
+			ResetTokens: opts.ResetTokens,
+			JobQueue:    opts.JobQueue,
+			Logger:      logger,
 		})
 
 		mux.Handle("/auth/login", authLimiter(http.HandlerFunc(authHandler.Login)))

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"fmt"
 	_ "go-lang/docs"
 	"go-lang/internal/auth"
 	cacheimpl "go-lang/internal/cache"
@@ -25,7 +27,6 @@ import (
 	"go-lang/internal/ratelimit"
 	"go-lang/internal/server"
 	"go-lang/internal/store"
-	"fmt"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -165,26 +166,8 @@ func main() {
 	defer cancelDispatcher()
 	go dispatcher.Run(dispatcherCtx)
 
-	addr := ":" + cfg.Port
-	app := server.New(cachedStore, logger, server.Options{
-		MaxBodyBytes:    cfg.MaxBodyBytes,
-		TokenIssuer:     issuer,
-		RefreshIssuer:   refreshIssuer,
-		Blacklist:       blacklist,
-		BcryptCost:      cfg.BcryptCost,
-		Metrics:         metrics,
-		HealthProbes:    probes,
-		DBPinger:        pinger,
-		GlobalLimiter:   globalLimiter,
-		AuthLimiter:     authLimiter,
-		IdempotencyStore: idempStore,
-		ResetTokens:     resetTokenStore,
-		Outbox:           outbox,
-		CORS: server.CORSConfig{
-			AllowedOrigins: cfg.CORSAllowedOrigins,
-		},
-	})
-
+	// Job queue and registry must be available before server.New so that the
+	// auth handler enqueues welcome_email jobs through the standard defaults.
 	jobQueue, jobQueueClose, err := buildJobQueue(cfg, logger)
 	if err != nil {
 		logger.Error("failed to build job queue", slog.String("error", err.Error()))
@@ -202,11 +185,47 @@ func main() {
 	if jobDeadClose != nil {
 		defer jobDeadClose()
 	}
+
+	emailSender := buildEmailSender(logger)
+
 	jobReg := jobs.NewRegistry(jobQueue, jobDead, logger)
-	jobReg.Register("welcome_email", jobs.HandlerFunc(func(_ context.Context, _ jobs.Job) error {
-		logger.Info("welcome email job ran (mock)")
-		return nil
+	jobReg.Register("welcome_email", jobs.HandlerFunc(func(ctx context.Context, job jobs.Job) error {
+		var payload struct {
+			ID    int64  `json:"id"`
+			Name  string `json:"name"`
+			Email string `json:"email"`
+		}
+		if err := json.Unmarshal(job.Payload, &payload); err != nil {
+			return fmt.Errorf("welcome_email: decode payload: %w", err)
+		}
+		body := fmt.Sprintf("Welcome to go-rest-api, %s!", payload.Name)
+		return emailSender.Send(ctx, email.Message{
+			To:      payload.Email,
+			Subject: "Welcome",
+			Body:    body,
+		})
 	}))
+
+	addr := ":" + cfg.Port
+	app := server.New(cachedStore, logger, server.Options{
+		MaxBodyBytes:     cfg.MaxBodyBytes,
+		TokenIssuer:      issuer,
+		RefreshIssuer:    refreshIssuer,
+		Blacklist:        blacklist,
+		BcryptCost:       cfg.BcryptCost,
+		Metrics:          metrics,
+		HealthProbes:     probes,
+		DBPinger:         pinger,
+		GlobalLimiter:    globalLimiter,
+		AuthLimiter:      authLimiter,
+		IdempotencyStore: idempStore,
+		ResetTokens:      resetTokenStore,
+		Outbox:           outbox,
+		JobQueue:         jobReg,
+		CORS: server.CORSConfig{
+			AllowedOrigins: cfg.CORSAllowedOrigins,
+		},
+	})
 
 	jobCtx, cancelJobs := context.WithCancel(context.Background())
 	defer cancelJobs()
