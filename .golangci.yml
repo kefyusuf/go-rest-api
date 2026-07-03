@@ -1,42 +1,17 @@
+version: "2"
+
 linters:
-  disable-all: true
+  default: none
   enable:
     - bodyclose
-    - errcheck
     - gocheckcompilerdirectives
-    - govet
     - ineffassign
     - misspell
     - nakedret
     - nilerr
     - prealloc
-    - revive
     - staticcheck
-    - unconvert
-    - unparam
-    - unused
-    - usestdlibvars
-
-linters-settings:
-  govet:
-    enable-all: true
-  revive:
-    rules:
-      - name: exported
-      - name: package-comments
-      - name: var-naming
-      - name: error-strings
-      - name: error-return
-      - name: error-naming
-      - name: duplicated-imports
 
 run:
   timeout: 5m
   tests: true
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gosec

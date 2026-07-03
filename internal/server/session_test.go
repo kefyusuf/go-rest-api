@@ -18,7 +18,7 @@ const (
 	sessionJWTSecret = "this-is-a-test-jwt-secret-of-at-least-32-bytes"
 )
 
-func newSessionApp(t *testing.T) (*httptest.Server, *auth.TokenIssuer, *auth.TokenIssuer, *auth.Blacklist, store.UserStore) {
+func newSessionApp(t *testing.T) (*httptest.Server, *auth.TokenIssuer, *auth.TokenIssuer, auth.Blacklist, store.UserStore) {
 	t.Helper()
 	userStore := store.NewMemoryUserStore()
 	access, err := auth.NewTokenIssuer(sessionJWTSecret, 15*time.Minute, "test", auth.KindAccess)
