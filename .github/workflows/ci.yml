@@ -30,7 +30,7 @@ jobs:
           --health-retries 10
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: setup-go
         uses: actions/setup-go@v6
@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: setup-go
         uses: actions/setup-go@v6
@@ -90,7 +90,7 @@ jobs:
     needs: [test, lint]
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: setup-go
         uses: actions/setup-go@v6
