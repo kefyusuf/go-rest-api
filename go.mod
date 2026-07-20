@@ -10,7 +10,7 @@ require (
 	github.com/segmentio/kafka-go v0.4.51
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.6
-	github.com/wneessen/go-mail v0.7.0
+	github.com/wneessen/go-mail v0.8.1
 	golang.org/x/crypto v0.54.0
 )
 
