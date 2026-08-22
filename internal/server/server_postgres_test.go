@@ -35,7 +35,6 @@ func TestUsersCRUDFlowWithPostgres(t *testing.T) {
 	}
 
 	access, _ := auth.NewTokenIssuer(testJWTSecret, 15*time.Minute, "test", auth.KindAccess)
-	_ = access
 	app := server.New(store.NewPostgresUserStore(db), newTestLogger(), server.Options{
 		TokenIssuer:     access,
 		BcryptCost:      4,
@@ -43,18 +42,20 @@ func TestUsersCRUDFlowWithPostgres(t *testing.T) {
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
-	created := createPostgresUser(t, ts.URL, model.CreateUserRequest{
+	bearer := postgresBearer(t, access)
+
+	created := createPostgresUser(t, ts.URL, bearer, model.CreateUserRequest{
 		Name:  "Ada Lovelace",
 		Email: "ada@example.com",
 		Password: "correct-password",
 	})
 
-	fetched := getPostgresUser(t, ts.URL, created.ID)
+	fetched := getPostgresUser(t, ts.URL, bearer, created.ID)
 	if fetched.Name != created.Name || fetched.Email != created.Email {
 		t.Fatalf("fetched user mismatch: got %+v want %+v", fetched, created)
 	}
 
-	updated := updatePostgresUser(t, ts.URL, created.ID, model.UpdateUserRequest{
+	updated := updatePostgresUser(t, ts.URL, bearer, created.ID, model.UpdateUserRequest{
 		Name:  "Ada Byron",
 		Email: "ada.byron@example.com",
 	})
@@ -62,16 +63,22 @@ func TestUsersCRUDFlowWithPostgres(t *testing.T) {
 		t.Fatalf("updated user mismatch: got %+v", updated)
 	}
 
-	deletePostgresUser(t, ts.URL, created.ID)
+	deletePostgresUser(t, ts.URL, bearer, created.ID)
 
-	res, err := http.Get(ts.URL + "/users/" + intToString(created.ID))
+	res, err := http.NewRequest(http.MethodGet, ts.URL+"/users/"+intToString(created.ID), nil)
+	if err != nil {
+		t.Fatalf("build get deleted user failed: %v", err)
+	}
+	res.Header.Set("Authorization", "Bearer "+bearer)
+
+	res2, err := http.DefaultClient.Do(res)
 	if err != nil {
 		t.Fatalf("get deleted user failed: %v", err)
 	}
-	defer res.Body.Close()
+	defer res2.Body.Close()
 
-	if res.StatusCode != http.StatusNotFound {
-		t.Fatalf("expected 404 after delete, got %d", res.StatusCode)
+	if res2.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404 after delete, got %d", res2.StatusCode)
 	}
 }
 
@@ -90,7 +97,6 @@ func TestUsersDuplicateEmailWithPostgresReturnsConflict(t *testing.T) {
 	}
 
 	access, _ := auth.NewTokenIssuer(testJWTSecret, 15*time.Minute, "test", auth.KindAccess)
-	_ = access
 	app := server.New(store.NewPostgresUserStore(db), newTestLogger(), server.Options{
 		TokenIssuer:     access,
 		BcryptCost:      4,
@@ -98,17 +104,26 @@ func TestUsersDuplicateEmailWithPostgresReturnsConflict(t *testing.T) {
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
-	createPostgresUser(t, ts.URL, model.CreateUserRequest{
+	bearer := postgresBearer(t, access)
+
+	createPostgresUser(t, ts.URL, bearer, model.CreateUserRequest{
 		Name:  "Ada Lovelace",
 		Email: "ada@example.com",
 		Password: "correct-password",
 	})
 
-	res, err := http.Post(ts.URL+"/users", "application/json", bytes.NewReader(mustPostgresJSON(t, model.CreateUserRequest{
+	req, err := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(mustPostgresJSON(t, model.CreateUserRequest{
 		Name:  "Grace Hopper",
 		Email: "ada@example.com",
 		Password: "correct-password",
 	})))
+	if err != nil {
+		t.Fatalf("build duplicate create request failed: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+bearer)
+
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("duplicate create request failed: %v", err)
 	}
@@ -152,10 +167,29 @@ func resetUsersTable(t *testing.T, db *sql.DB) {
 	}
 }
 
-func createPostgresUser(t *testing.T, baseURL string, input model.CreateUserRequest) model.User {
+// postgresBearer mints an access token straight from the test issuer for
+// calling the protected users CRUD.
+func postgresBearer(t *testing.T, issuer *auth.TokenIssuer) string {
 	t.Helper()
 
-	res, err := http.Post(baseURL+"/users", "application/json", bytes.NewReader(mustPostgresJSON(t, input)))
+	token, _, err := issuer.Issue(1)
+	if err != nil {
+		t.Fatalf("issue bearer token: %v", err)
+	}
+	return token
+}
+
+func createPostgresUser(t *testing.T, baseURL, bearer string, input model.CreateUserRequest) model.User {
+	t.Helper()
+
+	req, err := http.NewRequest(http.MethodPost, baseURL+"/users", bytes.NewReader(mustPostgresJSON(t, input)))
+	if err != nil {
+		t.Fatalf("build create user request failed: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+bearer)
+
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("create user request failed: %v", err)
 	}
@@ -170,10 +204,16 @@ func createPostgresUser(t *testing.T, baseURL string, input model.CreateUserRequ
 	return user
 }
 
-func getPostgresUser(t *testing.T, baseURL string, id int) model.User {
+func getPostgresUser(t *testing.T, baseURL, bearer string, id int) model.User {
 	t.Helper()
 
-	res, err := http.Get(baseURL + "/users/" + intToString(id))
+	req, err := http.NewRequest(http.MethodGet, baseURL+"/users/"+intToString(id), nil)
+	if err != nil {
+		t.Fatalf("build get user request failed: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+bearer)
+
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("get user request failed: %v", err)
 	}
@@ -188,7 +228,7 @@ func getPostgresUser(t *testing.T, baseURL string, id int) model.User {
 	return user
 }
 
-func updatePostgresUser(t *testing.T, baseURL string, id int, input model.UpdateUserRequest) model.User {
+func updatePostgresUser(t *testing.T, baseURL, bearer string, id int, input model.UpdateUserRequest) model.User {
 	t.Helper()
 
 	req, err := http.NewRequest(http.MethodPut, baseURL+"/users/"+intToString(id), bytes.NewReader(mustPostgresJSON(t, input)))
@@ -196,6 +236,7 @@ func updatePostgresUser(t *testing.T, baseURL string, id int, input model.Update
 		t.Fatalf("build update request failed: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+bearer)
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -212,13 +253,14 @@ func updatePostgresUser(t *testing.T, baseURL string, id int, input model.Update
 	return user
 }
 
-func deletePostgresUser(t *testing.T, baseURL string, id int) {
+func deletePostgresUser(t *testing.T, baseURL, bearer string, id int) {
 	t.Helper()
 
 	req, err := http.NewRequest(http.MethodDelete, baseURL+"/users/"+intToString(id), nil)
 	if err != nil {
 		t.Fatalf("build delete request failed: %v", err)
 	}
+	req.Header.Set("Authorization", "Bearer "+bearer)
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
