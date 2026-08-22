@@ -1,0 +1,29 @@
+name: keepalive
+
+# Pings the Render free-tier demo every five minutes so the instance stays
+# warm for portfolio visitors. Scheduled workflows are automatically
+# disabled after 60 days without repo activity - re-run any workflow or push
+# a commit to re-enable.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ping demo health endpoint
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 https://go-rest-api-demo.onrender.com/health/live)
+          echo "health/live -> $code"
+          if [ "$code" != "200" ]; then
+            echo "::warning::demo health check returned $code"
+          fi
