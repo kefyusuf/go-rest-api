@@ -1,5 +1,9 @@
 # Go REST API Starter
 
+[![CI](https://github.com/kefyusuf/go-rest-api/actions/workflows/ci.yml/badge.svg)](https://github.com/kefyusuf/go-rest-api/actions/workflows/ci.yml)
+![Release](https://img.shields.io/badge/release-v1.0.0-3F51B5)
+[![Deploy to Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7?logo=render&logoColor=white)](https://render.com/deploy?repo=https://github.com/kefyusuf/go-rest-api)
+
 A production-shaped Go REST API built incrementally through 12 learning
 layers. The repository starts as a 200-line `net/http` skeleton and grows,
 layer by layer, into a backend with JWT auth, caching, rate limiting,

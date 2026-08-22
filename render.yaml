@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: go-rest-api-demo
+    runtime: image
+    image:
+      url: ghcr.io/kefyusuf/go-rest-api/api:latest
+    plan: free
+    healthCheckPath: /health/live
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: go-rest-api-db
+          property: connectionString
+      - key: JWTSecret
+        generateValue: true
+      - key: APP_ENV
+        value: production
+
+databases:
+  - name: go-rest-api-db
+    databaseName: go_lang
+    plan: free
