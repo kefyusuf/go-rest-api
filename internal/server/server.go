@@ -93,12 +93,21 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 	}
 
 	mux.HandleFunc("/health", healthHandler.Check)
+	// protect guards a users-CRUD handler with bearer authentication when the
+	// server was built with a token issuer. Without an issuer the routes stay
+	// open so the server keeps working in its minimal no-auth configuration.
+	protect := func(next http.Handler) http.Handler {
+		if opts.TokenIssuer == nil {
+			return next
+		}
+		return RequireAuth(opts.TokenIssuer, opts.Blacklist)(next)
+	}
 	mux.Handle("/users", globalLimiter(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			userHandler.ListUsers(w, r)
+			protect(http.HandlerFunc(userHandler.ListUsers)).ServeHTTP(w, r)
 		case http.MethodPost:
-			WithIdempotency(IdempotencyOptions{Store: opts.IdempotencyStore}, http.HandlerFunc(userHandler.CreateUser)).ServeHTTP(w, r)
+			protect(WithIdempotency(IdempotencyOptions{Store: opts.IdempotencyStore}, http.HandlerFunc(userHandler.CreateUser))).ServeHTTP(w, r)
 		default:
 			response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		}
@@ -106,11 +115,11 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 	mux.Handle("/users/", globalLimiter(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			userHandler.GetUserByID(w, r)
+			protect(http.HandlerFunc(userHandler.GetUserByID)).ServeHTTP(w, r)
 		case http.MethodPut:
-			userHandler.UpdateUser(w, r)
+			protect(http.HandlerFunc(userHandler.UpdateUser)).ServeHTTP(w, r)
 		case http.MethodDelete:
-			userHandler.DeleteUser(w, r)
+			protect(http.HandlerFunc(userHandler.DeleteUser)).ServeHTTP(w, r)
 		default:
 			response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		}

@@ -37,6 +37,8 @@ func TestIdempotencyReplaysSameKeySameBody(t *testing.T) {
 	ts, _ := newIdempotentApp(t)
 	defer ts.Close()
 
+	token := registerUser(t, ts, "Seeder", "seeder@example.com", "pw").AccessToken
+
 	body := mustJSON(t, model.CreateUserRequest{
 		Name: "Ada", Email: "ada@example.com", Password: "pw",
 	})
@@ -45,6 +47,7 @@ func TestIdempotencyReplaysSameKeySameBody(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Idempotency-Key", "users-create-1")
+		req.Header.Set("Authorization", "Bearer "+token)
 		res, err := http.DefaultClient.Do(req)
 		if err != nil {
 			t.Fatalf("post: %v", err)
@@ -73,6 +76,8 @@ func TestIdempotencyRejectsSameKeyDifferentBody(t *testing.T) {
 	ts, _ := newIdempotentApp(t)
 	defer ts.Close()
 
+	token := registerUser(t, ts, "Seeder", "seeder@example.com", "pw").AccessToken
+
 	first := mustJSON(t, model.CreateUserRequest{
 		Name: "Ada", Email: "ada@example.com", Password: "pw",
 	})
@@ -83,6 +88,7 @@ func TestIdempotencyRejectsSameKeyDifferentBody(t *testing.T) {
 	req1, _ := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(first))
 	req1.Header.Set("Content-Type", "application/json")
 	req1.Header.Set("Idempotency-Key", "key-1")
+	req1.Header.Set("Authorization", "Bearer "+token)
 	res1, err := http.DefaultClient.Do(req1)
 	if err != nil {
 		t.Fatalf("first: %v", err)
@@ -95,6 +101,7 @@ func TestIdempotencyRejectsSameKeyDifferentBody(t *testing.T) {
 	req2, _ := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(second))
 	req2.Header.Set("Content-Type", "application/json")
 	req2.Header.Set("Idempotency-Key", "key-1")
+	req2.Header.Set("Authorization", "Bearer "+token)
 	res2, err := http.DefaultClient.Do(req2)
 	if err != nil {
 		t.Fatalf("second: %v", err)
@@ -109,23 +116,30 @@ func TestIdempotencyNoKeyAlwaysCallsHandler(t *testing.T) {
 	ts, _ := newIdempotentApp(t)
 	defer ts.Close()
 
+	token := registerUser(t, ts, "Seeder", "seeder@example.com", "pw").AccessToken
+
 	body := mustJSON(t, model.CreateUserRequest{
 		Name: "User", Email: "user@example.com", Password: "pw",
 	})
 
-	first, err := http.Post(ts.URL+"/users", "application/json", bytes.NewReader(body))
-	if err != nil {
-		t.Fatalf("first: %v", err)
+	post := func() *http.Response {
+		req, _ := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("post: %v", err)
+		}
+		return res
 	}
+
+	first := post()
 	defer first.Body.Close()
 	if first.StatusCode != http.StatusCreated {
 		t.Fatalf("expected 201, got %d", first.StatusCode)
 	}
 
-	second, err := http.Post(ts.URL+"/users", "application/json", bytes.NewReader(body))
-	if err != nil {
-		t.Fatalf("second: %v", err)
-	}
+	second := post()
 	defer second.Body.Close()
 	if second.StatusCode != http.StatusConflict {
 		t.Fatalf("expected 409 (duplicate email) without idempotency key, got %d", second.StatusCode)

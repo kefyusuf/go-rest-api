@@ -100,6 +100,9 @@ func newAuthAppWithJobs(t *testing.T, jobQueue jobs.Enqueuer) (*httptest.Server,
 
 func seedUser(t *testing.T, ts *httptest.Server, name, email, password string) model.User {
 	t.Helper()
+	// /users is protected: bootstrap one registration to hold a bearer token.
+	seed := registerUser(t, ts, "Seeder", "seeder+"+email, "seed-password")
+
 	body, err := json.Marshal(model.CreateUserRequest{
 		Name:     name,
 		Email:    email,
@@ -109,7 +112,14 @@ func seedUser(t *testing.T, ts *httptest.Server, name, email, password string) m
 		t.Fatalf("marshal: %v", err)
 	}
 
-	res, err := http.Post(ts.URL+"/users", "application/json", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("build create user: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+seed.AccessToken)
+
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("create user: %v", err)
 	}
