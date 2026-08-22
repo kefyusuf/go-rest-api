@@ -30,6 +30,7 @@ table below; the per-layer branches exist only as a learning history.
 - Security headers (`X-Content-Type-Options`, `X-Frame-Options`,
   `Referrer-Policy`) and opt-in CORS
 - `Idempotency-Key` support on `POST /users` and `POST /auth/register`
+- Bearer-protected users CRUD (list/get/create/update/delete)
 - Background-job queue with exponential-backoff retry and a dead-letter list
 - Outbox + dispatcher for event publishing (in-memory publisher; Kafka
   is a drop-in via the `Publisher` interface)
@@ -72,6 +73,7 @@ side-by-side diff.
 | 11 | Event publishing | [`layer/10-event-driven`](../../tree/layer/10-event-driven) | [#11](../../pull/11) | Outbox + dispatcher + `Publisher` interface, `user.created` event published with key=user id, Kafka is a drop-in adapter | stable |
 | 12 | CI/CD | [`layer/11-delivery-platform`](../../tree/layer/11-delivery-platform) | [#12](../../pull/12) | `.github/workflows/{ci,release,dependabot-auto-merge}.yml`, `Makefile` mirroring CI, `golangci.yml` curated ruleset, Dependabot config | stable |
 | 13 | K8s + Helm | [`layer/12-k8s-cloud`](../../tree/layer/12-k8s-cloud) | [#13](../../pull/13) | `deploy/k8s/` Kustomize bundle (Namespace, ConfigMap, Secret, Deployment with hardened security context, Service, HPA, Ingress + NetworkPolicy, PDB, ServiceMonitor) and `deploy/helm/go-rest-api/` Helm chart | stable |
+| 14 | Users CRUD auth | [`layer/14-users-crud-auth`](../../tree/layer/14-users-crud-auth) | [#30](../../pull/30) | All `/users` endpoints require a valid access token; anonymous enumeration and modification closed | stable |
 
 Every layer in the table is already merged into `main`. The per-layer
 branches are kept in the repository so a reader can `git checkout` any
