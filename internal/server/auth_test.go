@@ -98,10 +98,13 @@ func newAuthAppWithJobs(t *testing.T, jobQueue jobs.Enqueuer) (*httptest.Server,
 	return ts, issuer, refresh, blacklist, userStore
 }
 
-func seedUser(t *testing.T, ts *httptest.Server, name, email, password string) model.User {
+func seedUser(t *testing.T, ts *httptest.Server, issuer *auth.TokenIssuer, name, email, password string) model.User {
 	t.Helper()
-	// /users is protected: bootstrap one registration to hold a bearer token.
-	seed := registerUser(t, ts, "Seeder", "seeder+"+email, "seed-password")
+	// /users is protected: mint a bearer token straight from the test issuer.
+	token, _, err := issuer.Issue(1)
+	if err != nil {
+		t.Fatalf("issue seed token: %v", err)
+	}
 
 	body, err := json.Marshal(model.CreateUserRequest{
 		Name:     name,
@@ -117,7 +120,7 @@ func seedUser(t *testing.T, ts *httptest.Server, name, email, password string) m
 		t.Fatalf("build create user: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+seed.AccessToken)
+	req.Header.Set("Authorization", "Bearer "+token)
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -212,10 +215,10 @@ func TestRegisterDoesNotFailWhenWelcomeEmailEnqueueFails(t *testing.T) {
 }
 
 func TestLoginHappyPath(t *testing.T) {
-	ts, _, _, _, _ := newAuthApp(t)
+	ts, issuer, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
-	seedUser(t, ts, "Ada Lovelace", "ada@example.com", "correct-horse-battery-staple")
+	seedUser(t, ts, issuer, "Ada Lovelace", "ada@example.com", "correct-horse-battery-staple")
 
 	body, _ := json.Marshal(model.LoginRequest{
 		Email:    "ada@example.com",
@@ -254,10 +257,10 @@ func TestLoginHappyPath(t *testing.T) {
 }
 
 func TestLoginRejectsWrongPassword(t *testing.T) {
-	ts, _, _, _, _ := newAuthApp(t)
+	ts, issuer, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
-	seedUser(t, ts, "Ada", "ada@example.com", "right-password")
+	seedUser(t, ts, issuer, "Ada", "ada@example.com", "right-password")
 
 	body, _ := json.Marshal(model.LoginRequest{
 		Email:    "ada@example.com",
@@ -364,7 +367,7 @@ func TestMeWithValidToken(t *testing.T) {
 	ts, issuer, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
-	seedUser(t, ts, "Ada", "ada@example.com", "pw")
+	seedUser(t, ts, issuer, "Ada", "ada@example.com", "pw")
 	token, _, err := issuer.Issue(1)
 	if err != nil {
 		t.Fatalf("issue: %v", err)
@@ -446,7 +449,7 @@ func TestMeRejectsTamperedToken(t *testing.T) {
 	ts, issuer, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
-	seedUser(t, ts, "Ada", "ada@example.com", "pw")
+	seedUser(t, ts, issuer, "Ada", "ada@example.com", "pw")
 	token, _, err := issuer.Issue(1)
 	if err != nil {
 		t.Fatalf("issue: %v", err)

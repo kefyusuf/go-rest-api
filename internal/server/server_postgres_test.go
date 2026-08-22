@@ -35,7 +35,6 @@ func TestUsersCRUDFlowWithPostgres(t *testing.T) {
 	}
 
 	access, _ := auth.NewTokenIssuer(testJWTSecret, 15*time.Minute, "test", auth.KindAccess)
-	_ = access
 	app := server.New(store.NewPostgresUserStore(db), newTestLogger(), server.Options{
 		TokenIssuer:     access,
 		BcryptCost:      4,
@@ -43,7 +42,7 @@ func TestUsersCRUDFlowWithPostgres(t *testing.T) {
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
-	bearer := postgresBearer(t, ts.URL)
+	bearer := postgresBearer(t, access)
 
 	created := createPostgresUser(t, ts.URL, bearer, model.CreateUserRequest{
 		Name:  "Ada Lovelace",
@@ -98,7 +97,6 @@ func TestUsersDuplicateEmailWithPostgresReturnsConflict(t *testing.T) {
 	}
 
 	access, _ := auth.NewTokenIssuer(testJWTSecret, 15*time.Minute, "test", auth.KindAccess)
-	_ = access
 	app := server.New(store.NewPostgresUserStore(db), newTestLogger(), server.Options{
 		TokenIssuer:     access,
 		BcryptCost:      4,
@@ -106,7 +104,7 @@ func TestUsersDuplicateEmailWithPostgresReturnsConflict(t *testing.T) {
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
-	bearer := postgresBearer(t, ts.URL)
+	bearer := postgresBearer(t, access)
 
 	createPostgresUser(t, ts.URL, bearer, model.CreateUserRequest{
 		Name:  "Ada Lovelace",
@@ -169,29 +167,16 @@ func resetUsersTable(t *testing.T, db *sql.DB) {
 	}
 }
 
-// postgresBearer registers a bootstrap user through the public register
-// endpoint and returns an access token for calling the protected users CRUD.
-func postgresBearer(t *testing.T, baseURL string) string {
+// postgresBearer mints an access token straight from the test issuer for
+// calling the protected users CRUD.
+func postgresBearer(t *testing.T, issuer *auth.TokenIssuer) string {
 	t.Helper()
 
-	body := mustPostgresJSON(t, model.CreateUserRequest{
-		Name:     "Seeder",
-		Email:    "seeder@example.com",
-		Password: "correct-password",
-	})
-	res, err := http.Post(baseURL+"/auth/register", "application/json", bytes.NewReader(body))
+	token, _, err := issuer.Issue(1)
 	if err != nil {
-		t.Fatalf("bootstrap register failed: %v", err)
+		t.Fatalf("issue bearer token: %v", err)
 	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusCreated {
-		t.Fatalf("expected 201 on bootstrap register, got %d", res.StatusCode)
-	}
-
-	var out model.LoginResponse
-	decodePostgresJSON(t, res.Body, &out)
-	return out.AccessToken
+	return token
 }
 
 func createPostgresUser(t *testing.T, baseURL, bearer string, input model.CreateUserRequest) model.User {
