@@ -3,7 +3,7 @@ services:
     name: go-rest-api-demo
     runtime: image
     image:
-      url: ghcr.io/kefyusuf/go-rest-api/api:latest
+      url: ghcr.io/kefyusuf/go-rest-api/api:1.1.0
     plan: free
     healthCheckPath: /health/live
     envVars:
