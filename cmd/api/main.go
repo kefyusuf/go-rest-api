@@ -109,7 +109,13 @@ func main() {
 	cachedStore := store.NewCachedUserStore(userStore, userCache, cfg.UserCacheTTL)
 
 	metrics := observability.NewMetrics("go-rest-api", cfg.Environment)
-	probes := observability.NewHealthProbes("go-rest-api", "1.0.0", cfg.Environment)
+	// Report the deployed version from the environment so /health/ready does
+	// not drift from the actual image tag.
+	appVersion := os.Getenv("APP_VERSION")
+	if appVersion == "" {
+		appVersion = "dev"
+	}
+	probes := observability.NewHealthProbes("go-rest-api", appVersion, cfg.Environment)
 
 	globalLimiter, globalLimiterClose, err := buildRateLimiter("global", cfg.RateLimitPerSecond, cfg.RateLimitBurst, cfg, logger)
 	if err != nil {
