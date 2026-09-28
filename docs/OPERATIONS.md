@@ -232,6 +232,7 @@ sh scripts/test-db-down.sh
 | Variable | Where it is used | Example value | Description |
 |---|---|---|---|
 | `PORT` | inside the API container | `8080` | Port the API listens on |
+| `APP_VERSION` | API application | `local` | Free-form version label reported by `/health/ready`; set to a release tag in image-based deployments |
 | `DATABASE_URL` | API application and PostgreSQL integration tests | `postgres://postgres:postgres@postgres:5432/go_lang?sslmode=disable` | PostgreSQL connection URL for the application |
 | `JWTSecret` | API application | at least 32 random bytes | Secret used to sign JWT access tokens. Required. |
 | `ACCESS_TOKEN_TTL` | API application | `15m` | Lifetime of an access token |
