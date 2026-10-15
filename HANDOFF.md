@@ -1,5 +1,13 @@
 # Handoff
 
+> **This is a dated snapshot, not the current state.** It was written on 29 June 2026 at the end of the
+> layer-12 session. The commit it names — `a36f43d` — is still published on GitHub
+> (`GET /repos/kefyusuf/go-rest-api/commits/a36f43d` answers, dated 2026-06-29), but a fresh clone of
+> `main` does not contain it, so the layer history this file describes is no longer a straight line in
+> `main`'s log. For the current state, read `git log --oneline main` and the layer table in `README.md`,
+> which now lists 15 rows (0–14) rather than the 12 counted here. The three decisions this file could
+> not cover, because they were not written down at the time, are recorded in `docs/adr/`.
+
 ## Session summary
 
 This session started with an empty `main` branch containing a small Go
@@ -7,7 +15,7 @@ This session started with an empty `main` branch containing a small Go
 API with auth, caching, rate limiting, idempotency, background jobs,
 event publishing, observability, CI/CD, and Kubernetes manifests. Every
 layer landed on its own branch, was reviewed, and was merged into
-`main`. The final state is on `origin/main` at commit `a36f43d`.
+`main`. At the time of writing, the final state was `origin/main` at commit `a36f43d`.
 
 ## Final state
 
@@ -15,7 +23,8 @@ layer landed on its own branch, was reviewed, and was merged into
 
 - **URL:** https://github.com/kefyusuf/go-rest-api
 - **Default branch:** `main`
-- **HEAD commit on `main`:** `a36f43d` — *docs: split the README into focused docs/ files*
+- **HEAD commit on `main` at the time:** `a36f43d` — *docs: split the README into focused docs/ files*
+  (not reachable from `main` today; see the note at the top of this file)
 - **All 12 layer branches** are still on the remote as a learning
   history (`origin/layer/02-api-consistency` …
   `origin/layer/12-k8s-cloud`).

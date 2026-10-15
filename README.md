@@ -1,14 +1,26 @@
 # Go REST API Starter
 
 [![CI](https://github.com/kefyusuf/go-rest-api/actions/workflows/ci.yml/badge.svg)](https://github.com/kefyusuf/go-rest-api/actions/workflows/ci.yml)
-![Release](https://img.shields.io/badge/release-v1.0.0-3F51B5)
+![Release](https://img.shields.io/badge/release-v1.1.1-3F51B5)
 
-A production-shaped Go REST API built incrementally through 12 learning
-layers. The repository starts as a 200-line `net/http` skeleton and grows,
+A production-shaped Go REST API built incrementally through 15 layer rows (0–14, each on its own
+branch and pull request). The repository starts as a 200-line `net/http` skeleton and grows,
 layer by layer, into a backend with JWT auth, caching, rate limiting,
 background jobs, an event outbox, Prometheus metrics, CI/CD, and Kubernetes
 manifests. Every layer lands on its own branch with its own pull request,
 its own test suite, and its own entry in the table below.
+
+**Measured (2026-10-15):** 26 `*_test.go` files · 15 layer rows · tags `v1.0.0`, `v1.1.0`, `v1.1.1` ·
+CI: `ci.yml` (test + lint + build), `release.yml` (Docker image on `v*.*.*` tags),
+`dependabot-auto-merge.yml` · [HANDOFF.md](HANDOFF.md) is the session handoff record ·
+[docs/adr/](docs/adr/) holds the three decisions that were previously only inferable from code:
+token rotation, cache failure semantics, and the idempotency/outbox seam.
+
+**What this repository is:** a 15-step learning build kept public on purpose. Each PR below is my own
+and was reviewed by CI — test, lint, build — not by a second human, and no external service runs it.
+Read it as a method, not as production adoption. The Kubernetes and Helm surface under `deploy/` is
+written, not validated: no workflow runs `helm lint`, `kubeval` or a `kind` cluster, so layer 13 is
+evidence of manifest authoring, not of a tested deployment.
 
 The goal is for a reader to learn one production concern at a time without
 losing the working state of the previous one.
@@ -139,6 +151,8 @@ that does one job well.
 | Tech decisions, CI/CD pipelines, Kubernetes manifests, Helm chart, env variables, Docker network, start-up commands | [docs/OPERATIONS.md](docs/OPERATIONS.md) |
 | Branch lifecycle, naming, contribution rules, project structure, first contribution checklist | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) |
 | Endpoint reference, hardening, idempotency, jobs, events, caching details, curl examples, swagger, tests | [docs/REFERENCE.md](docs/REFERENCE.md) |
+| Why tokens fail open when Redis is down, why cache errors fall through to the DB, why the outbox is durable but not transactional | [docs/adr/](docs/adr/) |
+| The handoff record of the layer-12 session (dated snapshot; see the correction note at its top) | [HANDOFF.md](HANDOFF.md) |
 
 Each `docs/` file is a normal markdown document that lives next to the
 README. They are referenced from the GitHub UI tree view and from the
