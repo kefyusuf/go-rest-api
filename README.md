@@ -16,11 +16,12 @@ CI: `ci.yml` (test + lint + build), `release.yml` (Docker image on `v*.*.*` tags
 [docs/adr/](docs/adr/) holds the three decisions that were previously only inferable from code:
 token rotation, cache failure semantics, and the idempotency/outbox seam.
 
-**What this repository is:** a 15-step learning build kept public on purpose. Each PR below is my own
-and was reviewed by CI — test, lint, build — not by a second human, and no external service runs it.
-Read it as a method, not as production adoption. The Kubernetes and Helm surface under `deploy/` is
-written, not validated: no workflow runs `helm lint`, `kubeval` or a `kind` cluster, so layer 13 is
-evidence of manifest authoring, not of a tested deployment.
+**Scope:** every pull request below is authored and merged by one person, gated by CI — test, lint,
+build — across 26 `*_test.go` files; the layer boundaries are recorded in
+[`docs/LAYERS.md`](docs/LAYERS.md). There is no external review and no production traffic. The
+Kubernetes and Helm surface under `deploy/` is therefore documented but unvalidated: no workflow
+runs `helm lint`, `kubeval` or a `kind` cluster, so layer 13 is manifest authoring, not a tested
+deployment.
 
 The goal is for a reader to learn one production concern at a time without
 losing the working state of the previous one.
