@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"go-lang/internal/observability"
+	"github.com/kefyusuf/go-rest-api/internal/observability"
 )
 
 type stubPinger struct {

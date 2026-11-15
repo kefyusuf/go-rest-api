@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"go-lang/internal/model"
-	"go-lang/internal/response"
+	"github.com/kefyusuf/go-rest-api/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/response"
 )
 
 func Recovery(logger *slog.Logger) func(http.Handler) http.Handler {

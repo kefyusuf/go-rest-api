@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"go-lang/internal/model"
-	"go-lang/internal/response"
-	"go-lang/internal/store"
+	"github.com/kefyusuf/go-rest-api/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/response"
+	"github.com/kefyusuf/go-rest-api/internal/store"
 )
 
 type MeHandler struct {

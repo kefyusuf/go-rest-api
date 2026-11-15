@@ -7,7 +7,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"go-lang/internal/auth"
+	"github.com/kefyusuf/go-rest-api/internal/auth"
 )
 
 // redisClient returns a Redis client connected to localhost. The test

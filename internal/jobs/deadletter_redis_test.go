@@ -7,7 +7,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"go-lang/internal/jobs"
+	"github.com/kefyusuf/go-rest-api/internal/jobs"
 )
 
 func deadLetterRedisClient(t *testing.T) *redis.Client {

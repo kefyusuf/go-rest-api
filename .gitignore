@@ -7,3 +7,6 @@ tmp/
 
 # Kubernetes secret manifest is created locally from 11-secret.yaml.example
 deploy/k8s/11-secret.yaml
+
+# Local security-scanner session state
+.mimosa/

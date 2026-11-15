@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"go-lang/internal/ratelimit"
+	"github.com/kefyusuf/go-rest-api/internal/ratelimit"
 )
 
 func TestLimiterAllowsUpToBurst(t *testing.T) {

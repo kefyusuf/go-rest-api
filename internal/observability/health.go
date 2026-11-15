@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"go-lang/internal/model"
-	"go-lang/internal/response"
+	"github.com/kefyusuf/go-rest-api/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/response"
 )
 
 type Pinger interface {

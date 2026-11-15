@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"go-lang/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/model"
 )
 
 func TestUsersRoutesRejectAnonymousCalls(t *testing.T) {

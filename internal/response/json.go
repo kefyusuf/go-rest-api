@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"go-lang/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/model"
 )
 
 func JSON(w http.ResponseWriter, statusCode int, data any) {

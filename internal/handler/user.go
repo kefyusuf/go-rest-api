@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"go-lang/internal/auth"
-	"go-lang/internal/events"
-	"go-lang/internal/model"
-	"go-lang/internal/response"
-	"go-lang/internal/store"
+	"github.com/kefyusuf/go-rest-api/internal/auth"
+	"github.com/kefyusuf/go-rest-api/internal/events"
+	"github.com/kefyusuf/go-rest-api/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/response"
+	"github.com/kefyusuf/go-rest-api/internal/store"
 )
 
 type UserHandler struct {

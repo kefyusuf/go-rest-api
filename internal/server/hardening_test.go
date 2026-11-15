@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"go-lang/internal/auth"
-	"go-lang/internal/ratelimit"
-	"go-lang/internal/server"
-	"go-lang/internal/store"
+	"github.com/kefyusuf/go-rest-api/internal/auth"
+	"github.com/kefyusuf/go-rest-api/internal/ratelimit"
+	"github.com/kefyusuf/go-rest-api/internal/server"
+	"github.com/kefyusuf/go-rest-api/internal/store"
 )
 
 func TestSecurityHeadersOnAllResponses(t *testing.T) {

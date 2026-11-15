@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"go-lang/internal/cache"
+	"github.com/kefyusuf/go-rest-api/internal/cache"
 )
 
 func TestMemoryCacheSetAndGet(t *testing.T) {

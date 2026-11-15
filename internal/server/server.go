@@ -7,16 +7,16 @@ import (
 
 	httpSwagger "github.com/swaggo/http-swagger"
 
-	"go-lang/internal/auth"
-	"go-lang/internal/events"
-	"go-lang/internal/handler"
-	"go-lang/internal/idempotency"
-	"go-lang/internal/jobs"
-	"go-lang/internal/model"
-	"go-lang/internal/observability"
-	"go-lang/internal/ratelimit"
-	"go-lang/internal/response"
-	"go-lang/internal/store"
+	"github.com/kefyusuf/go-rest-api/internal/auth"
+	"github.com/kefyusuf/go-rest-api/internal/events"
+	"github.com/kefyusuf/go-rest-api/internal/handler"
+	"github.com/kefyusuf/go-rest-api/internal/idempotency"
+	"github.com/kefyusuf/go-rest-api/internal/jobs"
+	"github.com/kefyusuf/go-rest-api/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/observability"
+	"github.com/kefyusuf/go-rest-api/internal/ratelimit"
+	"github.com/kefyusuf/go-rest-api/internal/response"
+	"github.com/kefyusuf/go-rest-api/internal/store"
 )
 
 type Options struct {

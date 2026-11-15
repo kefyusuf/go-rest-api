@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"go-lang/internal/auth"
-	"go-lang/internal/model"
-	"go-lang/internal/response"
+	"github.com/kefyusuf/go-rest-api/internal/auth"
+	"github.com/kefyusuf/go-rest-api/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/response"
 )
 
 const userIDCtxKey ctxKey = 100

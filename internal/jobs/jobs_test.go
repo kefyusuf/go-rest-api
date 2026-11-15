@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"go-lang/internal/jobs"
+	"github.com/kefyusuf/go-rest-api/internal/jobs"
 )
 
 func newTestLogger() *slog.Logger {

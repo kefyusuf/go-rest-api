@@ -3,9 +3,9 @@ package store_test
 import (
 	"testing"
 
-	"go-lang/internal/cache"
-	"go-lang/internal/model"
-	"go-lang/internal/store"
+	"github.com/kefyusuf/go-rest-api/internal/cache"
+	"github.com/kefyusuf/go-rest-api/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/store"
 )
 
 func TestCachedUserStoreServesFromCacheOnSecondRead(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"go-lang/internal/ratelimit"
+	"github.com/kefyusuf/go-rest-api/internal/ratelimit"
 )
 
 // redisClient returns a Redis client connected to localhost. If Redis

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"go-lang/internal/idempotency"
+	"github.com/kefyusuf/go-rest-api/internal/idempotency"
 )
 
 func TestHashRequestIsStable(t *testing.T) {

@@ -1,4 +1,4 @@
-module go-lang
+module github.com/kefyusuf/go-rest-api
 
 go 1.26.0
 

@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"go-lang/internal/email"
+	"github.com/kefyusuf/go-rest-api/internal/email"
 )
 
 func discardLogger() *slog.Logger {

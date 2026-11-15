@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"go-lang/internal/observability"
+	"github.com/kefyusuf/go-rest-api/internal/observability"
 )
 
 func TestNewMetricsRegistersCoreMetrics(t *testing.T) {

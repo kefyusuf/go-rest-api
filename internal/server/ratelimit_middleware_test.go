@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"go-lang/internal/server"
+	"github.com/kefyusuf/go-rest-api/internal/server"
 )
 
 // The Redis limiter derives its bucket keys from the name the

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"go-lang/internal/cache"
-	"go-lang/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/cache"
+	"github.com/kefyusuf/go-rest-api/internal/model"
 )
 
 // CachedUserStore wraps a UserStore with a read-through cache. Reads

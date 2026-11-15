@@ -13,11 +13,11 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"go-lang/internal/auth"
-	"go-lang/internal/database"
-	"go-lang/internal/model"
-	"go-lang/internal/server"
-	"go-lang/internal/store"
+	"github.com/kefyusuf/go-rest-api/internal/auth"
+	"github.com/kefyusuf/go-rest-api/internal/database"
+	"github.com/kefyusuf/go-rest-api/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/server"
+	"github.com/kefyusuf/go-rest-api/internal/store"
 )
 
 func TestUsersCRUDFlowWithPostgres(t *testing.T) {

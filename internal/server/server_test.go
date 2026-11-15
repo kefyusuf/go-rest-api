@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"testing"
 
-	"go-lang/internal/model"
-	"go-lang/internal/server"
-	"go-lang/internal/store"
+	"github.com/kefyusuf/go-rest-api/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/server"
+	"github.com/kefyusuf/go-rest-api/internal/store"
 )
 
 func TestUsersCRUDFlow(t *testing.T) {

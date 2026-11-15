@@ -7,7 +7,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"go-lang/internal/idempotency"
+	"github.com/kefyusuf/go-rest-api/internal/idempotency"
 )
 
 func idempotencyRedisClient(t *testing.T) *redis.Client {

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"go-lang/internal/events"
+	"github.com/kefyusuf/go-rest-api/internal/events"
 )
 
 func kafkaTestLogger() *slog.Logger {

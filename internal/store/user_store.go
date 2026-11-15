@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"go-lang/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/model"
 )
 
 var ErrUserNotFound = errors.New("user not found")

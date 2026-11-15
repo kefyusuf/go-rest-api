@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"go-lang/internal/observability"
+	"github.com/kefyusuf/go-rest-api/internal/observability"
 )
 
 // MetricsMiddleware records http_requests_total,

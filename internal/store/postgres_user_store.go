@@ -6,7 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"go-lang/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/model"
 )
 
 type PostgresUserStore struct {

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"go-lang/internal/model"
-	"go-lang/internal/ratelimit"
-	"go-lang/internal/response"
+	"github.com/kefyusuf/go-rest-api/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/ratelimit"
+	"github.com/kefyusuf/go-rest-api/internal/response"
 )
 
 type RateLimitConfig struct {

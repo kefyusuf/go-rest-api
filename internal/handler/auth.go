@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"go-lang/internal/auth"
-	"go-lang/internal/jobs"
-	"go-lang/internal/model"
-	"go-lang/internal/response"
-	"go-lang/internal/store"
+	"github.com/kefyusuf/go-rest-api/internal/auth"
+	"github.com/kefyusuf/go-rest-api/internal/jobs"
+	"github.com/kefyusuf/go-rest-api/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/response"
+	"github.com/kefyusuf/go-rest-api/internal/store"
 )
 
 type AuthHandler struct {

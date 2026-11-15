@@ -9,7 +9,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
-	"go-lang/internal/events"
+	"github.com/kefyusuf/go-rest-api/internal/events"
 )
 
 // postgresDSN returns a Postgres connection string. The test

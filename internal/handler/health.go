@@ -3,8 +3,8 @@ package handler
 import (
 	"net/http"
 
-	"go-lang/internal/model"
-	"go-lang/internal/response"
+	"github.com/kefyusuf/go-rest-api/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/response"
 )
 
 type HealthHandler struct{}

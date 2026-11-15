@@ -15,11 +15,11 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"go-lang/internal/auth"
-	"go-lang/internal/jobs"
-	"go-lang/internal/model"
-	"go-lang/internal/server"
-	"go-lang/internal/store"
+	"github.com/kefyusuf/go-rest-api/internal/auth"
+	"github.com/kefyusuf/go-rest-api/internal/jobs"
+	"github.com/kefyusuf/go-rest-api/internal/model"
+	"github.com/kefyusuf/go-rest-api/internal/server"
+	"github.com/kefyusuf/go-rest-api/internal/store"
 )
 
 const testJWTSecret = "this-is-a-test-jwt-secret-of-at-least-32-bytes"

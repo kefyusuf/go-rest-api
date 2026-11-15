@@ -7,7 +7,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"go-lang/internal/handler"
+	"github.com/kefyusuf/go-rest-api/internal/handler"
 )
 
 func resetTokenRedisClient(t *testing.T) *redis.Client {
