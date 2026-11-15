@@ -188,15 +188,15 @@ func newID() string {
 //
 // Schema (created by the migration in db.go):
 //
-//   CREATE TABLE events_outbox (
-//     id           TEXT PRIMARY KEY,
-//     type         TEXT NOT NULL,
-//     topic        TEXT NOT NULL,
-//     key          TEXT NOT NULL,
-//     payload      JSONB NOT NULL,
-//     occurred_at  TIMESTAMPTZ NOT NULL,
-//     published_at TIMESTAMPTZ
-//   );
+//	CREATE TABLE events_outbox (
+//	  id           TEXT PRIMARY KEY,
+//	  type         TEXT NOT NULL,
+//	  topic        TEXT NOT NULL,
+//	  key          TEXT NOT NULL,
+//	  payload      JSONB NOT NULL,
+//	  occurred_at  TIMESTAMPTZ NOT NULL,
+//	  published_at TIMESTAMPTZ
+//	);
 type DBOutbox struct {
 	db    *sql.DB
 	table string
