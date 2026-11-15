@@ -5,13 +5,17 @@ linters:
   enable:
     - bodyclose
     - gocheckcompilerdirectives
-    - gofmt
     - ineffassign
     - misspell
     - nakedret
     - nilerr
     - prealloc
     - staticcheck
+
+# Formatters live in their own section since golangci-lint v2.
+formatters:
+  enable:
+    - gofmt
 
 run:
   timeout: 5m
