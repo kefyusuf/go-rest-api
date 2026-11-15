@@ -37,10 +37,10 @@ func TestIdempotencyReplaysSameKeySameBody(t *testing.T) {
 	ts, _ := newIdempotentApp(t)
 	defer ts.Close()
 
-	token := registerUser(t, ts, "Seeder", "seeder@example.com", "pw").AccessToken
+	token := registerUser(t, ts, "Seeder", "seeder@example.com", "valid-password").AccessToken
 
 	body := mustJSON(t, model.CreateUserRequest{
-		Name: "Ada", Email: "ada@example.com", Password: "pw",
+		Name: "Ada", Email: "ada@example.com", Password: "valid-password",
 	})
 
 	post := func() *http.Response {
@@ -76,13 +76,13 @@ func TestIdempotencyRejectsSameKeyDifferentBody(t *testing.T) {
 	ts, _ := newIdempotentApp(t)
 	defer ts.Close()
 
-	token := registerUser(t, ts, "Seeder", "seeder@example.com", "pw").AccessToken
+	token := registerUser(t, ts, "Seeder", "seeder@example.com", "valid-password").AccessToken
 
 	first := mustJSON(t, model.CreateUserRequest{
-		Name: "Ada", Email: "ada@example.com", Password: "pw",
+		Name: "Ada", Email: "ada@example.com", Password: "valid-password",
 	})
 	second := mustJSON(t, model.CreateUserRequest{
-		Name: "Grace", Email: "grace@example.com", Password: "pw",
+		Name: "Grace", Email: "grace@example.com", Password: "valid-password",
 	})
 
 	req1, _ := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(first))
@@ -116,10 +116,10 @@ func TestIdempotencyNoKeyAlwaysCallsHandler(t *testing.T) {
 	ts, _ := newIdempotentApp(t)
 	defer ts.Close()
 
-	token := registerUser(t, ts, "Seeder", "seeder@example.com", "pw").AccessToken
+	token := registerUser(t, ts, "Seeder", "seeder@example.com", "valid-password").AccessToken
 
 	body := mustJSON(t, model.CreateUserRequest{
-		Name: "User", Email: "user@example.com", Password: "pw",
+		Name: "User", Email: "user@example.com", Password: "valid-password",
 	})
 
 	post := func() *http.Response {
@@ -151,7 +151,7 @@ func TestIdempotencyReplaysOnRegister(t *testing.T) {
 	defer ts.Close()
 
 	body := mustJSON(t, model.CreateUserRequest{
-		Name: "Ada", Email: "ada@example.com", Password: "pw",
+		Name: "Ada", Email: "ada@example.com", Password: "valid-password",
 	})
 
 	post := func() *http.Response {

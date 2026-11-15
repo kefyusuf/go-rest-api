@@ -13,7 +13,7 @@ func TestUsersRoutesRejectAnonymousCalls(t *testing.T) {
 	ts, _, _, _, _ := newSessionApp(t)
 	defer ts.Close()
 
-	registerUser(t, ts, "Ada", "ada@example.com", "pw")
+	registerUser(t, ts, "Ada", "ada@example.com", "valid-password")
 
 	cases := []struct {
 		name   string
@@ -23,7 +23,7 @@ func TestUsersRoutesRejectAnonymousCalls(t *testing.T) {
 	}{
 		{"list", http.MethodGet, "/users", ""},
 		{"get by id", http.MethodGet, "/users/1", ""},
-		{"create", http.MethodPost, "/users", `{"name":"Bob","email":"bob@example.com","password":"pw"}`},
+		{"create", http.MethodPost, "/users", `{"name":"Bob","email":"bob@example.com","password":"valid-password"}`},
 		{"update", http.MethodPut, "/users/1", `{"name":"Ada Byron","email":"ada.byron@example.com"}`},
 		{"delete", http.MethodDelete, "/users/1", ""},
 	}
@@ -65,8 +65,8 @@ func TestAuthenticatedUserCanListAndGet(t *testing.T) {
 	ts, _, _, _, _ := newSessionApp(t)
 	defer ts.Close()
 
-	registerUser(t, ts, "Ada", "ada@example.com", "pw")
-	token := registerUser(t, ts, "Grace", "grace@example.com", "pw").AccessToken
+	registerUser(t, ts, "Ada", "ada@example.com", "valid-password")
+	token := registerUser(t, ts, "Grace", "grace@example.com", "valid-password").AccessToken
 
 	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/users", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
@@ -104,10 +104,10 @@ func TestAuthenticatedCreateUpdateDeleteCycle(t *testing.T) {
 	ts, _, _, _, _ := newSessionApp(t)
 	defer ts.Close()
 
-	token := registerUser(t, ts, "Ada", "ada@example.com", "pw").AccessToken
+	token := registerUser(t, ts, "Ada", "ada@example.com", "valid-password").AccessToken
 
 	createBody := mustJSON(t, model.CreateUserRequest{
-		Name: "Bob", Email: "bob@example.com", Password: "pw",
+		Name: "Bob", Email: "bob@example.com", Password: "valid-password",
 	})
 	authReq, _ := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(createBody))
 	authReq.Header.Set("Content-Type", "application/json")

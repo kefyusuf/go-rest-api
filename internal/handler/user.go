@@ -15,7 +15,6 @@ import (
 	"go-lang/internal/model"
 	"go-lang/internal/response"
 	"go-lang/internal/store"
-
 )
 
 type UserHandler struct {
@@ -267,15 +266,36 @@ func validateUserInput(name, email, password string) map[string][]string {
 		details["email"] = append(details["email"], "required")
 	}
 
-	if password == "" {
-		details["password"] = append(details["password"], "required")
-	}
+	validatePassword(details, password)
 
 	if len(details) == 0 {
 		return nil
 	}
 
 	return details
+}
+
+// Password policy: NIST SP 800-63B sets the floor for user-chosen
+// passwords at 8 characters, and 72 bytes is bcrypt's input limit,
+// beyond which it would silently truncate the password.
+const (
+	minPasswordBytes = 8
+	maxPasswordBytes = 72
+)
+
+// validatePassword appends the shared password-policy violations for
+// password to details. Registration, user creation and password reset
+// all route through it; login stays required-only so existing accounts
+// keep working as the policy evolves.
+func validatePassword(details map[string][]string, password string) {
+	switch {
+	case password == "":
+		details["password"] = append(details["password"], "required")
+	case len(password) < minPasswordBytes:
+		details["password"] = append(details["password"], "must be at least 8 characters")
+	case len(password) > maxPasswordBytes:
+		details["password"] = append(details["password"], "must be at most 72 bytes")
+	}
 }
 
 func validateUpdateUserInput(name, email string) map[string][]string {

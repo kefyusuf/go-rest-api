@@ -36,6 +36,8 @@ table below; the per-layer branches exist only as a learning history.
 - JWT auth: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`,
   `POST /auth/logout`, `POST /auth/forgot-password`, `POST /auth/reset-password`,
   `GET /me`
+- Password policy: minimum 8 characters and maximum 72 bytes on
+  register, user create, and password reset
 - bcrypt password hashing; Argon2 is a drop-in if you need it
 - Read-through user cache (in-process map; switch to Redis via `REDIS_URL`)
 - Per-IP rate limiting (global + auth limiters) with a `Retry-After` header

@@ -430,9 +430,7 @@ func (h AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(input.Token) == "" {
 		details["token"] = append(details["token"], "required")
 	}
-	if input.Password == "" {
-		details["password"] = append(details["password"], "required")
-	}
+	validatePassword(details, input.Password)
 	if len(details) > 0 {
 		response.BadRequest(w, model.ErrorCodeValidation, "validation failed", details)
 		return

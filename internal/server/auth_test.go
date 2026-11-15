@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -333,6 +334,49 @@ func TestLoginValidation(t *testing.T) {
 	}
 }
 
+func TestRegisterEnforcesPasswordPolicy(t *testing.T) {
+	ts, _, _, _, _ := newAuthApp(t)
+	defer ts.Close()
+
+	cases := []struct {
+		name     string
+		password string
+		detail   string
+	}{
+		{"short", "pw", "must be at least 8 characters"},
+		{"overlong", strings.Repeat("a", 73), "must be at most 72 bytes"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			body, _ := json.Marshal(model.CreateUserRequest{Name: "Ada", Email: "ada@example.com", Password: tc.password})
+			res, err := http.Post(ts.URL+"/auth/register", "application/json", bytes.NewReader(body))
+			if err != nil {
+				t.Fatalf("register: %v", err)
+			}
+			defer res.Body.Close()
+
+			if res.StatusCode != http.StatusBadRequest {
+				t.Fatalf("expected 400, got %d", res.StatusCode)
+			}
+			var payload model.ErrorResponse
+			decodeJSON(t, res.Body, &payload)
+			if payload.Error.Code != model.ErrorCodeValidation {
+				t.Fatalf("expected VALIDATION_ERROR, got %q", payload.Error.Code)
+			}
+			found := false
+			for _, reason := range payload.Error.Details["password"] {
+				if reason == tc.detail {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("expected password detail %q, got %v", tc.detail, payload.Error.Details["password"])
+			}
+		})
+	}
+}
+
 func TestLoginMalformedJSON(t *testing.T) {
 	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
@@ -367,7 +411,7 @@ func TestMeWithValidToken(t *testing.T) {
 	ts, issuer, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
-	seedUser(t, ts, issuer, "Ada", "ada@example.com", "pw")
+	seedUser(t, ts, issuer, "Ada", "ada@example.com", "valid-password")
 	token, _, err := issuer.Issue(1)
 	if err != nil {
 		t.Fatalf("issue: %v", err)
@@ -449,7 +493,7 @@ func TestMeRejectsTamperedToken(t *testing.T) {
 	ts, issuer, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
-	seedUser(t, ts, issuer, "Ada", "ada@example.com", "pw")
+	seedUser(t, ts, issuer, "Ada", "ada@example.com", "valid-password")
 	token, _, err := issuer.Issue(1)
 	if err != nil {
 		t.Fatalf("issue: %v", err)
