@@ -6,7 +6,6 @@ namespace: go-rest-api
 resources:
   - 00-namespace.yaml
   - 10-configmap.yaml
-  - 11-secret.yaml
   - 20-deployment.yaml
   - 21-service.yaml
   - 30-ingress.yaml

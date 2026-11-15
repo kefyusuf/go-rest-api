@@ -43,6 +43,9 @@ config:
   logLevel: info
 
 secrets:
+  # Name of an existing Secret to consume instead of creating one.
+  # Leave empty to let the chart create a Secret from the values below.
+  existingSecret: ""
   jwtSecret: "change-me-to-a-long-random-secret-of-at-least-32-bytes"
   databaseURL: "postgres://postgres:postgres@postgres:5432/go_lang?sslmode=disable"
   redisURL: "redis://redis:6379/0"

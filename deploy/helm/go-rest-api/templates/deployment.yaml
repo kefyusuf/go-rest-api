@@ -46,7 +46,7 @@ spec:
             - configMapRef:
                 name: {{ include "go-rest-api.fullname" . }}-config
             - secretRef:
-                name: {{ include "go-rest-api.fullname" . }}-secrets
+                name: {{ .Values.secrets.existingSecret | default (printf "%s-secrets" (include "go-rest-api.fullname" .)) }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           startupProbe:

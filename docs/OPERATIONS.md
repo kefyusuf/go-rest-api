@@ -52,8 +52,7 @@ kubectl apply -k deploy/k8s
 ```
 
 It creates a Namespace, a ConfigMap with the non-secret runtime
-config, a Secret with placeholders for `JWTSecret`, `DATABASE_URL`,
-and `REDIS_URL`, a Deployment (2 replicas, non-root, hardened
+config, a Deployment (2 replicas, non-root, hardened
 security context, startup/liveness/readiness probes against
 `/health/live` and `/health/ready`), a Service, a
 HorizontalPodAutoscaler (2-10 replicas on CPU and memory), an
@@ -71,7 +70,9 @@ small so it is easy to read and override.
 
 Production checklist:
 
-- Replace the placeholder `JWTSecret` in the secret with
+- Create the Secret before applying the bundle: copy the tracked
+  `deploy/k8s/11-secret.yaml.example` to `11-secret.yaml`
+  (git-ignored), then replace the placeholder `JWT_SECRET` with
   `openssl rand -base64 48`
 - Replace the placeholder `DATABASE_URL` and `REDIS_URL` with
   real connection strings, including `?sslmode=require` for
@@ -234,10 +235,10 @@ sh scripts/test-db-down.sh
 | `PORT` | inside the API container | `8080` | Port the API listens on |
 | `APP_VERSION` | API application | `local` | Free-form version label reported by `/health/ready`; set to a release tag in image-based deployments |
 | `DATABASE_URL` | API application and PostgreSQL integration tests | `postgres://postgres:postgres@postgres:5432/go_lang?sslmode=disable` | PostgreSQL connection URL for the application |
-| `JWTSecret` | API application | at least 32 random bytes | Secret used to sign JWT access tokens. Required. |
+| `JWT_SECRET` | API application | at least 32 random bytes | Secret used to sign JWT access tokens. Required. |
 | `ACCESS_TOKEN_TTL` | API application | `15m` | Lifetime of an access token |
 | `REFRESH_TOKEN_TTL` | API application | `168h` | Lifetime of a refresh token |
-| `BcryptCost` | API application | `10` | bcrypt cost factor used when hashing passwords |
+| `BCRYPT_COST` | API application | `10` | bcrypt cost factor used when hashing passwords |
 | `APP_ENV` | API application | `development` | Environment name; emitted as the JWT `iss` claim |
 | `READ_HEADER_TIMEOUT` | API application | `5s` | HTTP read header timeout |
 | `READ_TIMEOUT` | API application | `15s` | HTTP read timeout |

@@ -4,3 +4,6 @@ tmp/
 .env.local
 .env.*.local
 *.env
+
+# Kubernetes secret manifest is created locally from 11-secret.yaml.example
+deploy/k8s/11-secret.yaml
