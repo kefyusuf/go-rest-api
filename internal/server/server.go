@@ -46,7 +46,7 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 
 	mux := http.NewServeMux()
 	healthHandler := handler.NewHealthHandler()
-	userHandler := handler.NewUserHandler(userStore, opts.BcryptCost, opts.Outbox)
+	userHandler := handler.NewUserHandler(userStore, opts.BcryptCost, opts.Outbox, logger)
 	meHandler := handler.NewMeHandler(userStore)
 
 	// The auth limiter namespaces its per-IP keys so that, in the Redis

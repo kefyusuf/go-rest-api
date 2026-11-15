@@ -2,6 +2,7 @@ package response
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 
 	"go-lang/internal/model"
@@ -12,7 +13,10 @@ func JSON(w http.ResponseWriter, statusCode int, data any) {
 	w.WriteHeader(statusCode)
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		http.Error(w, `{"error":"failed to encode response"}`, http.StatusInternalServerError)
+		// The status line is already on the wire, so there is nothing
+		// left to send but a truncated body; log the failure instead
+		// of pretending a second status code can reach the client.
+		slog.Error("failed to encode response", slog.String("error", err.Error()))
 	}
 }
 

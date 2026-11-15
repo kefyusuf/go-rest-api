@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"mime"
 	"net/http"
 	"strconv"
@@ -21,10 +22,14 @@ type UserHandler struct {
 	store      store.UserStore
 	bcryptCost int
 	outbox     events.Outbox
+	logger     *slog.Logger
 }
 
-func NewUserHandler(store store.UserStore, bcryptCost int, outbox events.Outbox) UserHandler {
-	return UserHandler{store: store, bcryptCost: bcryptCost, outbox: outbox}
+func NewUserHandler(store store.UserStore, bcryptCost int, outbox events.Outbox, logger *slog.Logger) UserHandler {
+	if logger == nil {
+		logger = slog.Default()
+	}
+	return UserHandler{store: store, bcryptCost: bcryptCost, outbox: outbox, logger: logger}
 }
 
 // ListUsers godoc
@@ -111,13 +116,19 @@ func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 			"name":  user.Name,
 			"email": user.Email,
 		})
-		_ = h.outbox.Enqueue(r.Context(), events.Event{
+		if err := h.outbox.Enqueue(r.Context(), events.Event{
 			Type:       "user.created",
 			Topic:      "users",
 			Key:        strconv.Itoa(user.ID),
 			Payload:    payload,
 			OccurredAt: time.Now(),
-		})
+		}); err != nil {
+			// The user is already created, so the request succeeds;
+			// a failed enqueue must at least be visible in the logs.
+			h.logger.Warn("failed to enqueue user.created event",
+				slog.Int("user_id", user.ID),
+				slog.String("error", err.Error()))
+		}
 	}
 
 	user.PasswordHash = ""
