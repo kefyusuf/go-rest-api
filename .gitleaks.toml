@@ -1,0 +1,13 @@
+# Extends the default gitleaks rules with a project-specific allowlist.
+#
+# Test fixtures and example templates hold synthetic values by design:
+# *_test.go registers users with literal passwords against in-process
+# test servers, and *.example files carry "change-me" placeholders for
+# readers to copy locally. None of them are credentials for any real
+# system, so they are allowlisted by path instead of by value.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "synthetic test fixtures and example templates"
+paths = '''(?i)(_test\.go|\.example)$'''
