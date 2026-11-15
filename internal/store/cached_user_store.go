@@ -21,8 +21,8 @@ func NewCachedUserStore(inner UserStore, userCache *cache.UserCache, ttl time.Du
 	return &CachedUserStore{inner: inner, cache: userCache, ttl: ttl}
 }
 
-func (s *CachedUserStore) List() ([]model.User, error) {
-	return s.inner.List()
+func (s *CachedUserStore) List(afterID int64, limit int) ([]model.User, error) {
+	return s.inner.List(afterID, limit)
 }
 
 func (s *CachedUserStore) GetByID(id int) (model.User, error) {

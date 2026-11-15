@@ -29,8 +29,8 @@ func scanUser(scanner interface {
 	return user, nil
 }
 
-func (s *PostgresUserStore) List() ([]model.User, error) {
-	rows, err := s.db.Query(`SELECT ` + userSelectColumns + ` FROM users ORDER BY id`)
+func (s *PostgresUserStore) List(afterID int64, limit int) ([]model.User, error) {
+	rows, err := s.db.Query(`SELECT `+userSelectColumns+` FROM users WHERE id > $1 ORDER BY id LIMIT $2`, afterID, limit)
 	if err != nil {
 		return nil, err
 	}

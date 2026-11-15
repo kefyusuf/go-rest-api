@@ -11,7 +11,11 @@ var ErrUserNotFound = errors.New("user not found")
 var ErrEmailAlreadyExists = errors.New("email already exists")
 
 type UserStore interface {
-	List() ([]model.User, error)
+	// List returns at most limit users ordered by ascending id whose
+	// id is strictly greater than afterID, so callers can page with
+	// keyset pagination (afterID = last id of the previous page,
+	// afterID 0 = first page). limit must be positive.
+	List(afterID int64, limit int) ([]model.User, error)
 	GetByID(id int) (model.User, error)
 	GetByEmail(email string) (model.User, error)
 	Create(input model.CreateUserRequest) (model.User, error)
@@ -33,12 +37,20 @@ func NewMemoryUserStore() *MemoryUserStore {
 	}
 }
 
-func (s *MemoryUserStore) List() ([]model.User, error) {
+func (s *MemoryUserStore) List(afterID int64, limit int) ([]model.User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	users := make([]model.User, len(s.users))
-	copy(users, s.users)
+	users := make([]model.User, 0, limit)
+	for _, user := range s.users {
+		if int64(user.ID) <= afterID {
+			continue
+		}
+		users = append(users, user)
+		if len(users) == limit {
+			break
+		}
+	}
 
 	return users, nil
 }

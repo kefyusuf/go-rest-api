@@ -34,10 +34,13 @@ func NewUserHandler(store store.UserStore, bcryptCost int, outbox events.Outbox,
 
 // ListUsers godoc
 // @Summary List users
-// @Description Lists all users
+// @Description Lists users with keyset pagination
 // @Tags users
 // @Produce json
+// @Param limit query int false "Page size, clamped to 1-100 (default 20)"
+// @Param cursor query int false "Return users with an id greater than this value"
 // @Success 200 {object} model.ListUsersResponse
+// @Failure 400 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
 // @Router /v1/users [get]
 func (h UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
@@ -46,19 +49,56 @@ func (h UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := h.store.List()
+	limit, cursor, message, ok := listPageParams(r)
+	if !ok {
+		response.BadRequest(w, model.ErrorCodeBadRequest, message, nil)
+		return
+	}
+
+	users, err := h.store.List(cursor, limit)
 	if err != nil {
 		handleUserStoreError(w, err)
 		return
 	}
 
+	meta := model.ListUsersMeta{Limit: limit}
+	// A full page means another page may follow; the cursor is the
+	// last id of this page, so the next request resumes after it.
+	if len(users) == limit && limit > 0 {
+		nextCursor := strconv.FormatInt(int64(users[len(users)-1].ID), 10)
+		meta.NextCursor = &nextCursor
+	}
+
 	response.JSON(w, http.StatusOK, model.ListUsersResponse{
 		Data: users,
-		Meta: model.ListUsersMeta{
-			NextCursor: nil,
-			Limit:      20,
-		},
+		Meta: meta,
 	})
+}
+
+// listPageParams parses and clamps the pagination query parameters.
+// limit defaults to 20 and is clamped to 1-100; cursor defaults to 0
+// and must be a non-negative integer.
+func listPageParams(r *http.Request) (limit int, cursor int64, message string, ok bool) {
+	limit = 20
+	query := r.URL.Query()
+
+	if v := query.Get("limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 1 || n > 100 {
+			return 0, 0, "limit must be an integer between 1 and 100", false
+		}
+		limit = n
+	}
+
+	if v := query.Get("cursor"); v != "" {
+		n, err := strconv.ParseInt(v, 10, 64)
+		if err != nil || n < 0 {
+			return 0, 0, "cursor must be a non-negative integer", false
+		}
+		cursor = n
+	}
+
+	return limit, cursor, "", true
 }
 
 // CreateUser godoc

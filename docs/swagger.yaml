@@ -345,7 +345,16 @@ paths:
       - auth
   /v1/users:
     get:
-      description: Lists all users
+      description: Lists users with keyset pagination
+      parameters:
+      - description: Page size, clamped to 1-100 (default 20)
+        in: query
+        name: limit
+        type: integer
+      - description: Return users with an id greater than this value
+        in: query
+        name: cursor
+        type: integer
       produces:
       - application/json
       responses:
@@ -353,6 +362,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/model.ListUsersResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:

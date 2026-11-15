@@ -347,7 +347,7 @@ const docTemplate = `{
         },
         "/v1/users": {
             "get": {
-                "description": "Lists all users",
+                "description": "Lists users with keyset pagination",
                 "produces": [
                     "application/json"
                 ],
@@ -355,11 +355,31 @@ const docTemplate = `{
                     "users"
                 ],
                 "summary": "List users",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page size, clamped to 1-100 (default 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Return users with an id greater than this value",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/model.ListUsersResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "500": {

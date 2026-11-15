@@ -57,9 +57,19 @@ curl http://localhost:8080/v1/metrics
 
 ### GET /v1/users
 
-Returns all users.
+Lists users with keyset pagination, ordered by ascending id.
 
-Example response:
+Query parameters:
+
+- `limit` — page size, clamped to 1-100 (default `20`)
+- `cursor` — return users with an id strictly greater than this value;
+  omit or pass `0` for the first page
+
+When a full page is returned, `meta.nextCursor` carries the id to pass
+as the next request's `cursor`; an absent `nextCursor` means there are
+no more pages.
+
+Example response (first page of 3 users at `limit=2`):
 
 ```json
 {
@@ -68,11 +78,16 @@ Example response:
       "id": 1,
       "name": "Ada Lovelace",
       "email": "ada@example.com"
+    },
+    {
+      "id": 2,
+      "name": "Grace Hopper",
+      "email": "grace@example.com"
     }
   ],
   "meta": {
-    "nextCursor": null,
-    "limit": 20
+    "nextCursor": "2",
+    "limit": 2
   }
 }
 ```
