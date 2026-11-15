@@ -6,6 +6,8 @@ the project versions with SemVer tags (`v*.*.*`).
 
 ## [Unreleased]
 
+## [1.2.0] – 2026-11-15
+
 ### Added
 - Application routes are versioned under `/v1`; `/health`, `/health/live`,
   `/health/ready`, `/metrics` and `/swagger` stay unversioned
