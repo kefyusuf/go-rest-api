@@ -5,6 +5,7 @@ linters:
   enable:
     - bodyclose
     - gocheckcompilerdirectives
+    - gofmt
     - ineffassign
     - misspell
     - nakedret

@@ -7,11 +7,11 @@ import (
 )
 
 type AccessLogEntry struct {
-	Method     string        `json:"method"`
-	Path       string        `json:"path"`
-	Status     int           `json:"status"`
-	DurationMS int64         `json:"duration_ms"`
-	RequestID  string        `json:"requestId,omitempty"`
+	Method     string `json:"method"`
+	Path       string `json:"path"`
+	Status     int    `json:"status"`
+	DurationMS int64  `json:"duration_ms"`
+	RequestID  string `json:"requestId,omitempty"`
 }
 
 type statusRecorder struct {

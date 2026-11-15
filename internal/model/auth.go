@@ -8,13 +8,13 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	AccessToken       string    `json:"accessToken"`
-	RefreshToken      string    `json:"refreshToken"`
-	TokenType         string    `json:"tokenType"`
-	ExpiresIn         int64     `json:"expiresIn"`
-	ExpiresAt         time.Time `json:"expiresAt"`
-	RefreshExpiresAt  time.Time `json:"refreshExpiresAt"`
-	User              User      `json:"user"`
+	AccessToken      string    `json:"accessToken"`
+	RefreshToken     string    `json:"refreshToken"`
+	TokenType        string    `json:"tokenType"`
+	ExpiresIn        int64     `json:"expiresIn"`
+	ExpiresAt        time.Time `json:"expiresAt"`
+	RefreshExpiresAt time.Time `json:"refreshExpiresAt"`
+	User             User      `json:"user"`
 }
 
 type RefreshRequest struct {

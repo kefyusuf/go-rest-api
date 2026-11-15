@@ -27,9 +27,9 @@ import (
 // worker would have to track the last delivered ID locally and
 // resume with XREADGROUP "0" on restart.
 type redisQueue struct {
-	client *redis.Client
-	stream string
-	group  string
+	client   *redis.Client
+	stream   string
+	group    string
 	consumer string
 }
 

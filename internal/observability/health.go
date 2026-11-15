@@ -14,9 +14,9 @@ type Pinger interface {
 }
 
 type HealthProbes struct {
-	startedAt  time.Time
-	service    string
-	version    string
+	startedAt   time.Time
+	service     string
+	version     string
 	environment string
 }
 

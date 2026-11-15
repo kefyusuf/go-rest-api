@@ -116,9 +116,9 @@ func TestCORSPreflightReturns204(t *testing.T) {
 func TestRateLimitReturns429(t *testing.T) {
 	limiter := ratelimit.New(1, 1)
 	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{
-		BcryptCost:     4,
-		GlobalLimiter:  limiter,
-		AuthLimiter:    limiter,
+		BcryptCost:    4,
+		GlobalLimiter: limiter,
+		AuthLimiter:   limiter,
 	})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
@@ -161,12 +161,12 @@ func TestAuthRateLimitIndependentBucket(t *testing.T) {
 	blacklist := auth.NewBlacklist()
 
 	app := server.New(store.NewMemoryUserStore(), newTestLogger(), server.Options{
-		BcryptCost:     4,
-		GlobalLimiter:  globalLimiter,
-		AuthLimiter:    authLimiter,
-		TokenIssuer:    access,
-		RefreshIssuer:  refresh,
-		Blacklist:      blacklist,
+		BcryptCost:    4,
+		GlobalLimiter: globalLimiter,
+		AuthLimiter:   authLimiter,
+		TokenIssuer:   access,
+		RefreshIssuer: refresh,
+		Blacklist:     blacklist,
 	})
 	ts := httptest.NewServer(app)
 	defer ts.Close()

@@ -13,7 +13,7 @@ import (
 func jobsRedisClient(t *testing.T) *redis.Client {
 	t.Helper()
 	c := redis.NewClient(&redis.Options{
-		Addr:        "127.0.0.1:6379",
+		Addr:         "127.0.0.1:6379",
 		DialTimeout:  200 * time.Millisecond,
 		ReadTimeout:  200 * time.Millisecond,
 		WriteTimeout: 200 * time.Millisecond,

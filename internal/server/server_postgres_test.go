@@ -36,8 +36,8 @@ func TestUsersCRUDFlowWithPostgres(t *testing.T) {
 
 	access, _ := auth.NewTokenIssuer(testJWTSecret, 15*time.Minute, "test", auth.KindAccess)
 	app := server.New(store.NewPostgresUserStore(db), newTestLogger(), server.Options{
-		TokenIssuer:     access,
-		BcryptCost:      4,
+		TokenIssuer: access,
+		BcryptCost:  4,
 	})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
@@ -45,8 +45,8 @@ func TestUsersCRUDFlowWithPostgres(t *testing.T) {
 	bearer := postgresBearer(t, access)
 
 	created := createPostgresUser(t, ts.URL, bearer, model.CreateUserRequest{
-		Name:  "Ada Lovelace",
-		Email: "ada@example.com",
+		Name:     "Ada Lovelace",
+		Email:    "ada@example.com",
 		Password: "correct-password",
 	})
 
@@ -98,8 +98,8 @@ func TestUsersDuplicateEmailWithPostgresReturnsConflict(t *testing.T) {
 
 	access, _ := auth.NewTokenIssuer(testJWTSecret, 15*time.Minute, "test", auth.KindAccess)
 	app := server.New(store.NewPostgresUserStore(db), newTestLogger(), server.Options{
-		TokenIssuer:     access,
-		BcryptCost:      4,
+		TokenIssuer: access,
+		BcryptCost:  4,
 	})
 	ts := httptest.NewServer(app)
 	defer ts.Close()
@@ -107,14 +107,14 @@ func TestUsersDuplicateEmailWithPostgresReturnsConflict(t *testing.T) {
 	bearer := postgresBearer(t, access)
 
 	createPostgresUser(t, ts.URL, bearer, model.CreateUserRequest{
-		Name:  "Ada Lovelace",
-		Email: "ada@example.com",
+		Name:     "Ada Lovelace",
+		Email:    "ada@example.com",
 		Password: "correct-password",
 	})
 
 	req, err := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(mustPostgresJSON(t, model.CreateUserRequest{
-		Name:  "Grace Hopper",
-		Email: "ada@example.com",
+		Name:     "Grace Hopper",
+		Email:    "ada@example.com",
 		Password: "correct-password",
 	})))
 	if err != nil {
