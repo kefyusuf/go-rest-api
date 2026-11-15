@@ -33,15 +33,15 @@ type Config struct {
 
 	ShutdownTimeout time.Duration
 
-	RedisURL  string
+	RedisURL     string
 	UserCacheTTL time.Duration
 
 	KafkaBrokers      []string
 	KafkaTopic        string
 	KafkaWriteTimeout time.Duration
 
-	RateLimitPerSecond float64
-	RateLimitBurst     float64
+	RateLimitPerSecond     float64
+	RateLimitBurst         float64
 	AuthRateLimitPerSecond float64
 	AuthRateLimitBurst     float64
 
@@ -53,49 +53,49 @@ type Config struct {
 }
 
 const (
-	defaultPort              = "8080"
-	defaultEnv               = "development"
-	defaultAccessTokenTTL    = 15 * time.Minute
-	defaultRefreshTokenTTL   = 7 * 24 * time.Hour
-	defaultBcryptCost        = 10
-	defaultReadHeaderTimeout = 5 * time.Second
-	defaultReadTimeout       = 15 * time.Second
-	defaultWriteTimeout      = 15 * time.Second
-	defaultIdleTimeout       = 60 * time.Second
-	defaultMaxHeaderBytes    = 1 << 20
-	defaultMaxBodyBytes      = 1 << 20
-	defaultShutdownTimeout   = 15 * time.Second
-	defaultUserCacheTTL       = 5 * time.Minute
-	defaultRateLimitPerSecond  = 20
-	defaultRateLimitBurst      = 40
+	defaultPort                   = "8080"
+	defaultEnv                    = "development"
+	defaultAccessTokenTTL         = 15 * time.Minute
+	defaultRefreshTokenTTL        = 7 * 24 * time.Hour
+	defaultBcryptCost             = 10
+	defaultReadHeaderTimeout      = 5 * time.Second
+	defaultReadTimeout            = 15 * time.Second
+	defaultWriteTimeout           = 15 * time.Second
+	defaultIdleTimeout            = 60 * time.Second
+	defaultMaxHeaderBytes         = 1 << 20
+	defaultMaxBodyBytes           = 1 << 20
+	defaultShutdownTimeout        = 15 * time.Second
+	defaultUserCacheTTL           = 5 * time.Minute
+	defaultRateLimitPerSecond     = 20
+	defaultRateLimitBurst         = 40
 	defaultAuthRateLimitPerSecond = 5
 	defaultAuthRateLimitBurst     = 10
-	defaultIdempotencyTTL          = 24 * time.Hour
+	defaultIdempotencyTTL         = 24 * time.Hour
 )
 
 func Load() (Config, error) {
 	cfg := Config{
-		Port:             getenv("PORT", defaultPort),
-		DatabaseURL:      os.Getenv("DATABASE_URL"),
-		JWTSecret:        os.Getenv("JWTSecret"),
-		AccessTokenTTL:   defaultAccessTokenTTL,
-		RefreshTokenTTL:  defaultRefreshTokenTTL,
-		BcryptCost:       defaultBcryptCost,
-		Environment:      getenv("APP_ENV", defaultEnv),
-		ReadHeaderTimeout: defaultReadHeaderTimeout,
-		ReadTimeout:       defaultReadTimeout,
-		WriteTimeout:      defaultWriteTimeout,
-		IdleTimeout:       defaultIdleTimeout,
-		MaxHeaderBytes:    defaultMaxHeaderBytes,
-		MaxBodyBytes:      defaultMaxBodyBytes,
-		ShutdownTimeout:   defaultShutdownTimeout,
-		RedisURL:          os.Getenv("REDIS_URL"),
-		UserCacheTTL:      defaultUserCacheTTL,
-		KafkaBrokers:      nil,
-		KafkaTopic:        "go-rest-api.events",
-		KafkaWriteTimeout: 10 * time.Second,
-		RateLimitPerSecond: defaultRateLimitPerSecond,
-		RateLimitBurst:     defaultRateLimitBurst,
+		Port:                   getenv("PORT", defaultPort),
+		DatabaseURL:            os.Getenv("DATABASE_URL"),
+		JWTSecret:              os.Getenv("JWT_SECRET"),
+		AccessTokenTTL:         defaultAccessTokenTTL,
+		RefreshTokenTTL:        defaultRefreshTokenTTL,
+		BcryptCost:             defaultBcryptCost,
+		Environment:            getenv("APP_ENV", defaultEnv),
+		ReadHeaderTimeout:      defaultReadHeaderTimeout,
+		ReadTimeout:            defaultReadTimeout,
+		WriteTimeout:           defaultWriteTimeout,
+		IdleTimeout:            defaultIdleTimeout,
+		MaxHeaderBytes:         defaultMaxHeaderBytes,
+		MaxBodyBytes:           defaultMaxBodyBytes,
+		ShutdownTimeout:        defaultShutdownTimeout,
+		RedisURL:               os.Getenv("REDIS_URL"),
+		UserCacheTTL:           defaultUserCacheTTL,
+		KafkaBrokers:           nil,
+		KafkaTopic:             "go-rest-api.events",
+		KafkaWriteTimeout:      10 * time.Second,
+		RateLimitPerSecond:     defaultRateLimitPerSecond,
+		RateLimitBurst:         defaultRateLimitBurst,
 		AuthRateLimitPerSecond: defaultAuthRateLimitPerSecond,
 		AuthRateLimitBurst:     defaultAuthRateLimitBurst,
 		IdempotencyTTL:         defaultIdempotencyTTL,
@@ -218,13 +218,13 @@ func Load() (Config, error) {
 		cfg.IdempotencyTTL = d
 	}
 
-	if v := os.Getenv("BcryptCost"); v != "" {
+	if v := os.Getenv("BCRYPT_COST"); v != "" {
 		c, err := strconv.Atoi(v)
 		if err != nil {
-			return Config{}, fmt.Errorf("invalid BcryptCost: %w", err)
+			return Config{}, fmt.Errorf("invalid BCRYPT_COST: %w", err)
 		}
 		if c < 4 || c > 31 {
-			return Config{}, errors.New("BcryptCost must be between 4 and 31")
+			return Config{}, errors.New("BCRYPT_COST must be between 4 and 31")
 		}
 		cfg.BcryptCost = c
 	}
@@ -324,10 +324,10 @@ func (c Config) Validate() error {
 		return errors.New("RefreshTokenTTL must be positive")
 	}
 	if c.BcryptCost < 4 || c.BcryptCost > 31 {
-		return errors.New("BcryptCost must be between 4 and 31")
+		return errors.New("BCRYPT_COST must be between 4 and 31")
 	}
 	if len(c.JWTSecret) < 32 {
-		return errors.New("JWTSecret must be at least 32 bytes")
+		return errors.New("JWT_SECRET must be at least 32 bytes")
 	}
 	return nil
 }

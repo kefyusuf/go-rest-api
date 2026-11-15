@@ -9,7 +9,7 @@ func TestLoadAppliesDefaults(t *testing.T) {
 	t.Setenv("PORT", "")
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("ACCESS_TOKEN_TTL", "")
-	t.Setenv("BcryptCost", "")
+	t.Setenv("BCRYPT_COST", "")
 	t.Setenv("READ_HEADER_TIMEOUT", "")
 	t.Setenv("READ_TIMEOUT", "")
 	t.Setenv("WRITE_TIMEOUT", "")
@@ -62,7 +62,7 @@ func TestLoadHonorsOverrides(t *testing.T) {
 	t.Setenv("PORT", "9090")
 	t.Setenv("DATABASE_URL", "postgres://user:pass@host:5432/db")
 	t.Setenv("ACCESS_TOKEN_TTL", "30m")
-	t.Setenv("BcryptCost", "12")
+	t.Setenv("BCRYPT_COST", "12")
 	t.Setenv("APP_ENV", "staging")
 	t.Setenv("READ_HEADER_TIMEOUT", "2s")
 	t.Setenv("READ_TIMEOUT", "10s")
@@ -124,7 +124,7 @@ func TestLoadRejectsInvalidAccessTokenTTL(t *testing.T) {
 }
 
 func TestLoadRejectsInvalidBcryptCost(t *testing.T) {
-	t.Setenv("BcryptCost", "99")
+	t.Setenv("BCRYPT_COST", "99")
 
 	if _, err := Load(); err == nil {
 		t.Fatal("expected error for out-of-range BcryptCost, got nil")
@@ -157,10 +157,10 @@ func TestLoadRejectsNonPositiveShutdownTimeout(t *testing.T) {
 
 func TestValidateAcceptsLongSecret(t *testing.T) {
 	cfg := Config{
-		AccessTokenTTL: time.Minute,
+		AccessTokenTTL:  time.Minute,
 		RefreshTokenTTL: 24 * time.Hour,
-		BcryptCost:     10,
-		JWTSecret:      "a-long-enough-secret-of-at-least-32-bytes",
+		BcryptCost:      10,
+		JWTSecret:       "a-long-enough-secret-of-at-least-32-bytes",
 	}
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -169,10 +169,10 @@ func TestValidateAcceptsLongSecret(t *testing.T) {
 
 func TestValidateRejectsShortSecret(t *testing.T) {
 	cfg := Config{
-		AccessTokenTTL: time.Minute,
+		AccessTokenTTL:  time.Minute,
 		RefreshTokenTTL: 24 * time.Hour,
-		BcryptCost:     10,
-		JWTSecret:      "short",
+		BcryptCost:      10,
+		JWTSecret:       "short",
 	}
 	if err := cfg.Validate(); err == nil {
 		t.Fatal("expected error for short JWTSecret, got nil")
@@ -181,10 +181,10 @@ func TestValidateRejectsShortSecret(t *testing.T) {
 
 func TestValidateRejectsBadBcryptCost(t *testing.T) {
 	cfg := Config{
-		AccessTokenTTL: time.Minute,
+		AccessTokenTTL:  time.Minute,
 		RefreshTokenTTL: 24 * time.Hour,
-		BcryptCost:     2,
-		JWTSecret:      "a-long-enough-secret-of-at-least-32-bytes",
+		BcryptCost:      2,
+		JWTSecret:       "a-long-enough-secret-of-at-least-32-bytes",
 	}
 	if err := cfg.Validate(); err == nil {
 		t.Fatal("expected error for out-of-range BcryptCost, got nil")
