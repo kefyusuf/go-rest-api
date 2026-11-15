@@ -59,7 +59,7 @@ func TestUsersCRUDFlow(t *testing.T) {
 
 	deleteUser(t, ts.URL, created.ID)
 
-	res, err := http.Get(ts.URL + "/users/1")
+	res, err := http.Get(ts.URL + "/v1/users/1")
 	if err != nil {
 		t.Fatalf("get deleted user failed: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestUsersDuplicateEmailReturnsConflict(t *testing.T) {
 		Password: "correct-password",
 	})
 
-	res, err := http.Post(ts.URL+"/users", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/users", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("duplicate create request failed: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestUsersValidationErrors(t *testing.T) {
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
-	res, err := http.Post(ts.URL+"/users", "application/json", bytes.NewReader(mustJSON(t, map[string]string{
+	res, err := http.Post(ts.URL+"/v1/users", "application/json", bytes.NewReader(mustJSON(t, map[string]string{
 		"name":  "",
 		"email": "",
 	})))
@@ -162,7 +162,7 @@ func TestUsersCreateRejectsUnsupportedMediaType(t *testing.T) {
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
-	res, err := http.Post(ts.URL+"/users", "text/plain", bytes.NewReader([]byte("not-json")))
+	res, err := http.Post(ts.URL+"/v1/users", "text/plain", bytes.NewReader([]byte("not-json")))
 	if err != nil {
 		t.Fatalf("unsupported media type create request failed: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestUsersUpdateRejectsUnsupportedMediaType(t *testing.T) {
 		Password: "correct-password",
 	})
 
-	req, err := http.NewRequest(http.MethodPut, ts.URL+"/users/"+intToString(created.ID), bytes.NewReader([]byte("not-json")))
+	req, err := http.NewRequest(http.MethodPut, ts.URL+"/v1/users/"+intToString(created.ID), bytes.NewReader([]byte("not-json")))
 	if err != nil {
 		t.Fatalf("build unsupported media type update request failed: %v", err)
 	}
@@ -224,7 +224,7 @@ func TestUsersCreateRejectsMalformedJSON(t *testing.T) {
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
-	res, err := http.Post(ts.URL+"/users", "application/json", bytes.NewReader([]byte("{")))
+	res, err := http.Post(ts.URL+"/v1/users", "application/json", bytes.NewReader([]byte("{")))
 	if err != nil {
 		t.Fatalf("malformed create request failed: %v", err)
 	}
@@ -249,7 +249,7 @@ func TestUsersCreateRejectsEmptyBody(t *testing.T) {
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
-	res, err := http.Post(ts.URL+"/users", "application/json", bytes.NewReader([]byte{}))
+	res, err := http.Post(ts.URL+"/v1/users", "application/json", bytes.NewReader([]byte{}))
 	if err != nil {
 		t.Fatalf("empty body create request failed: %v", err)
 	}
@@ -280,7 +280,7 @@ func TestUsersUpdateRejectsMalformedJSON(t *testing.T) {
 		Password: "correct-password",
 	})
 
-	req, err := http.NewRequest(http.MethodPut, ts.URL+"/users/"+intToString(created.ID), bytes.NewReader([]byte("{")))
+	req, err := http.NewRequest(http.MethodPut, ts.URL+"/v1/users/"+intToString(created.ID), bytes.NewReader([]byte("{")))
 	if err != nil {
 		t.Fatalf("build malformed update request failed: %v", err)
 	}
@@ -309,7 +309,7 @@ func TestUsersUpdateRejectsMalformedJSON(t *testing.T) {
 func createUser(t *testing.T, baseURL string, input model.CreateUserRequest) model.User {
 	t.Helper()
 
-	res, err := http.Post(baseURL+"/users", "application/json", bytes.NewReader(mustJSON(t, input)))
+	res, err := http.Post(baseURL+"/v1/users", "application/json", bytes.NewReader(mustJSON(t, input)))
 	if err != nil {
 		t.Fatalf("create user request failed: %v", err)
 	}
@@ -327,7 +327,7 @@ func createUser(t *testing.T, baseURL string, input model.CreateUserRequest) mod
 func getUser(t *testing.T, baseURL string, id int) model.User {
 	t.Helper()
 
-	res, err := http.Get(baseURL + "/users/" + intToString(id))
+	res, err := http.Get(baseURL + "/v1/users/" + intToString(id))
 	if err != nil {
 		t.Fatalf("get user request failed: %v", err)
 	}
@@ -345,7 +345,7 @@ func getUser(t *testing.T, baseURL string, id int) model.User {
 func listUsers(t *testing.T, baseURL string) model.ListUsersResponse {
 	t.Helper()
 
-	res, err := http.Get(baseURL + "/users")
+	res, err := http.Get(baseURL + "/v1/users")
 	if err != nil {
 		t.Fatalf("list users request failed: %v", err)
 	}
@@ -363,7 +363,7 @@ func listUsers(t *testing.T, baseURL string) model.ListUsersResponse {
 func updateUser(t *testing.T, baseURL string, id int, input model.UpdateUserRequest) model.User {
 	t.Helper()
 
-	req, err := http.NewRequest(http.MethodPut, baseURL+"/users/"+intToString(id), bytes.NewReader(mustJSON(t, input)))
+	req, err := http.NewRequest(http.MethodPut, baseURL+"/v1/users/"+intToString(id), bytes.NewReader(mustJSON(t, input)))
 	if err != nil {
 		t.Fatalf("build update request failed: %v", err)
 	}
@@ -387,7 +387,7 @@ func updateUser(t *testing.T, baseURL string, id int, input model.UpdateUserRequ
 func deleteUser(t *testing.T, baseURL string, id int) {
 	t.Helper()
 
-	req, err := http.NewRequest(http.MethodDelete, baseURL+"/users/"+intToString(id), nil)
+	req, err := http.NewRequest(http.MethodDelete, baseURL+"/v1/users/"+intToString(id), nil)
 	if err != nil {
 		t.Fatalf("build delete request failed: %v", err)
 	}

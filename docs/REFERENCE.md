@@ -36,7 +36,7 @@ Readiness probe. Pings the database with a short timeout. Returns
 otherwise. The in-memory store path reports `ok` and skips the
 database check.
 
-### GET /metrics
+### GET /v1/metrics
 
 Prometheus exposition. The registry includes:
 
@@ -52,10 +52,10 @@ instance.
 Example:
 
 ```bash
-curl http://localhost:8080/metrics
+curl http://localhost:8080/v1/metrics
 ```
 
-### GET /users
+### GET /v1/users
 
 Returns all users.
 
@@ -77,11 +77,11 @@ Example response:
 }
 ```
 
-### GET /users/{id}
+### GET /v1/users/{id}
 
 Returns a single user.
 
-### POST /users
+### POST /v1/users
 
 Creates a new user. The password is hashed with bcrypt before it is
 stored; it is never returned in any response.
@@ -96,7 +96,7 @@ Example request body:
 }
 ```
 
-### POST /auth/register
+### POST /v1/auth/register
 
 Creates a new user account and returns a JWT access token and a refresh
 token. The password is hashed with bcrypt before it is stored; it is
@@ -132,7 +132,7 @@ Successful response (`201 Created`):
 
 If the email is already registered, the response is `409 Conflict`.
 
-### POST /auth/login
+### POST /v1/auth/login
 
 Exchanges email and password for a JWT access token and a refresh
 token.
@@ -169,15 +169,15 @@ Invalid credentials return `401 Unauthorized` with a generic
 message is the same whether the email is unknown or the password is
 wrong, so it does not leak which side failed.
 
-### POST /auth/logout
+### POST /v1/auth/logout
 
 Revokes the bearer token used in this request. After logout, the same
-token cannot be used to call `/me` or any other protected endpoint.
+token cannot be used to call `/v1/me` or any other protected endpoint.
 
 Example request:
 
 ```bash
-curl -X POST http://localhost:8080/auth/logout \
+curl -X POST http://localhost:8080/v1/auth/logout \
   -H "Authorization: Bearer <access-token>"
 ```
 
@@ -185,7 +185,7 @@ Successful response: `204 No Content`. The token blacklist lives in
 process memory, so it is cleared on restart. A production deployment
 would move it to Redis or another shared store (`layer/06`).
 
-### POST /auth/refresh
+### POST /v1/auth/refresh
 
 Trades a valid refresh token for a new access token and a new refresh
 token. The old refresh token is single-use and is rejected on replay.
@@ -199,9 +199,9 @@ Example request body:
 ```
 
 Successful response: `200 OK` with the same `LoginResponse` shape as
-`/auth/login`.
+`/v1/auth/login`.
 
-### POST /auth/forgot-password
+### POST /v1/auth/forgot-password
 
 Starts the password reset flow. Always returns `202 Accepted` whether
 or not the email is registered, to avoid leaking which emails exist on
@@ -215,17 +215,17 @@ directly so you can complete the flow locally:
   "accepted": true,
   "token": "<reset-token>",
   "expiresAt": "2026-06-29T14:00:00Z",
-  "resetUrl": "/auth/reset-password"
+  "resetUrl": "/v1/auth/reset-password"
 }
 ```
 
 A production deployment would email the token to the user and never
 include it in the response.
 
-### POST /auth/reset-password
+### POST /v1/auth/reset-password
 
 Resets a user's password using a valid reset token from the
-`/auth/forgot-password` response.
+`/v1/auth/forgot-password` response.
 
 Example request body:
 
@@ -238,14 +238,14 @@ Example request body:
 
 Successful response: `204 No Content`. The reset token is single-use.
 
-### GET /me
+### GET /v1/me
 
 Returns the user behind a valid bearer token.
 
 Example request:
 
 ```bash
-curl http://localhost:8080/me \
+curl http://localhost:8080/v1/me \
   -H "Authorization: Bearer <jwt>"
 ```
 
@@ -261,7 +261,7 @@ Successful response (`200 OK`):
 
 Missing, malformed, expired, or revoked tokens return `401 Unauthorized`.
 
-### PUT /users/{id}
+### PUT /v1/users/{id}
 
 Updates an existing user.
 
@@ -274,7 +274,7 @@ Example request body:
 }
 ```
 
-### DELETE /users/{id}
+### DELETE /v1/users/{id}
 
 Deletes a user. Returns `204 No Content` on success.
 
@@ -303,10 +303,10 @@ contract.
 Two token-bucket limiters, in-process per instance, keyed by client
 IP (or `X-Forwarded-For` / `X-Real-IP` if present):
 
-- Global limiter applied to `/users`, `/users/{id}`, `/me`:
+- Global limiter applied to `/v1/users`, `/v1/users/{id}`, `/v1/me`:
   default `RATE_LIMIT_PER_SECOND=20`, `RATE_LIMIT_BURST=40`
-- Auth limiter applied to `/auth/login`, `/auth/register`,
-  `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password`:
+- Auth limiter applied to `/v1/auth/login`, `/v1/auth/register`,
+  `/v1/auth/refresh`, `/v1/auth/forgot-password`, `/v1/auth/reset-password`:
   default `AUTH_RATE_LIMIT_PER_SECOND=5`, `AUTH_RATE_LIMIT_BURST=10`
 
 A request that exceeds the limit returns `429 Too Many Requests` with
@@ -350,7 +350,7 @@ duplicating the rest.
 
 ## Idempotency
 
-`POST /users` and `POST /auth/register` accept an optional
+`POST /v1/users` and `POST /v1/auth/register` accept an optional
 `Idempotency-Key` request header. The first call with a given key
 runs the handler and caches the response (status, body, content
 type) for `IDEMPOTENCY_TTL` (default `24h`).
@@ -438,7 +438,7 @@ more events (`user.updated`, `user.deleted`, ...).
 
 ## Caching
 
-`GET /users/{id}` and `GET /me` are served through a read-through
+`GET /v1/users/{id}` and `GET /v1/me` are served through a read-through
 cache (`internal/store/cached_user_store.go`) that wraps the
 underlying `UserStore`. The cache keeps a serialised user payload
 keyed by id with a configurable TTL (default `5m`, override with
@@ -478,7 +478,7 @@ curl http://localhost:8080/health
 ### 2. Create a user
 
 ```bash
-curl -X POST http://localhost:8080/users \
+curl -X POST http://localhost:8080/v1/users \
   -H "Content-Type: application/json" \
   -d '{"name":"Ada Lovelace","email":"ada@example.com","password":"correct-horse-battery-staple"}'
 ```
@@ -486,13 +486,13 @@ curl -X POST http://localhost:8080/users \
 ### 3. List all users
 
 ```bash
-curl http://localhost:8080/users
+curl http://localhost:8080/v1/users
 ```
 
 ### 4. Update a user
 
 ```bash
-curl -X PUT http://localhost:8080/users/1 \
+curl -X PUT http://localhost:8080/v1/users/1 \
   -H "Content-Type: application/json" \
   -d '{"name":"Ada Byron","email":"ada.byron@example.com"}'
 ```
@@ -503,13 +503,13 @@ Use `curl.exe` if needed.
 ### 5. Delete a user
 
 ```bash
-curl -X DELETE http://localhost:8080/users/1
+curl -X DELETE http://localhost:8080/v1/users/1
 ```
 
 ### 5a. Register a new account
 
 ```bash
-curl -X POST http://localhost:8080/auth/register \
+curl -X POST http://localhost:8080/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"name":"Ada Lovelace","email":"ada@example.com","password":"correct-horse-battery-staple"}'
 ```
@@ -517,14 +517,14 @@ curl -X POST http://localhost:8080/auth/register \
 ### 5b. Log out
 
 ```bash
-curl -X POST http://localhost:8080/auth/logout \
+curl -X POST http://localhost:8080/v1/auth/logout \
   -H "Authorization: Bearer <access-token>"
 ```
 
 ### 5c. Refresh an access token
 
 ```bash
-curl -X POST http://localhost:8080/auth/refresh \
+curl -X POST http://localhost:8080/v1/auth/refresh \
   -H "Content-Type: application/json" \
   -d '{"refreshToken":"<refresh-token>"}'
 ```
@@ -532,7 +532,7 @@ curl -X POST http://localhost:8080/auth/refresh \
 ### 6. Trigger a duplicate email error
 
 ```bash
-curl -X POST http://localhost:8080/users \
+curl -X POST http://localhost:8080/v1/users \
   -H "Content-Type: application/json" \
   -d '{"name":"Ada Lovelace","email":"ada@example.com","password":"correct-horse-battery-staple"}'
 ```
@@ -542,7 +542,7 @@ The second call returns `409 Conflict` with a `CONFLICT` error code.
 ### 7. Trigger a validation error
 
 ```bash
-curl -X POST http://localhost:8080/users \
+curl -X POST http://localhost:8080/v1/users \
   -H "Content-Type: application/json" \
   -d '{"name":"","email":""}'
 ```

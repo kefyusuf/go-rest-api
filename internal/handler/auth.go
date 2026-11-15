@@ -88,7 +88,7 @@ func NewAuthHandler(userStore store.UserStore, issuer *auth.TokenIssuer, refresh
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 409 {object} model.ErrorResponse
 // @Failure 415 {object} model.ErrorResponse
-// @Router /auth/register [post]
+// @Router /v1/auth/register [post]
 func (h AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
@@ -182,7 +182,7 @@ func (h AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 415 {object} model.ErrorResponse
-// @Router /auth/login [post]
+// @Router /v1/auth/login [post]
 func (h AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
@@ -246,7 +246,7 @@ func (h AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Security BearerAuth
 // @Success 204
 // @Failure 401 {object} model.ErrorResponse
-// @Router /auth/logout [post]
+// @Router /v1/auth/logout [post]
 func (h AuthHandler) Logout(w http.ResponseWriter, r *http.Request, accessToken string) {
 	if r.Method != http.MethodPost {
 		response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
@@ -278,7 +278,7 @@ func (h AuthHandler) Logout(w http.ResponseWriter, r *http.Request, accessToken 
 // @Success 200 {object} model.LoginResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
-// @Router /auth/refresh [post]
+// @Router /v1/auth/refresh [post]
 func (h AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
@@ -358,7 +358,7 @@ func (h AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 // @Success 202 {object} model.ForgotPasswordResponse
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 415 {object} model.ErrorResponse
-// @Router /auth/forgot-password [post]
+// @Router /v1/auth/forgot-password [post]
 func (h AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
@@ -395,7 +395,7 @@ func (h AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		Accepted:  true,
 		Token:     token,
 		ExpiresAt: expiresAt,
-		ResetURL:  "/auth/reset-password",
+		ResetURL:  "/v1/auth/reset-password",
 	})
 }
 
@@ -410,7 +410,7 @@ func (h AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} model.ErrorResponse
 // @Failure 401 {object} model.ErrorResponse
 // @Failure 415 {object} model.ErrorResponse
-// @Router /auth/reset-password [post]
+// @Router /v1/auth/reset-password [post]
 func (h AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")

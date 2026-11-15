@@ -116,7 +116,7 @@ func seedUser(t *testing.T, ts *httptest.Server, issuer *auth.TokenIssuer, name,
 		t.Fatalf("marshal: %v", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, ts.URL+"/v1/users", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("build create user: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestRegisterEnqueuesWelcomeEmailJob(t *testing.T) {
 		Email:    "Grace@Example.COM",
 		Password: "correct-horse-battery-staple",
 	})
-	res, err := http.Post(ts.URL+"/auth/register", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/register", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("register: %v", err)
 	}
@@ -197,7 +197,7 @@ func TestRegisterDoesNotFailWhenWelcomeEmailEnqueueFails(t *testing.T) {
 		Email:    "ada-register@example.com",
 		Password: "correct-horse-battery-staple",
 	})
-	res, err := http.Post(ts.URL+"/auth/register", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/register", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("register: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestLoginHappyPath(t *testing.T) {
 		Email:    "ada@example.com",
 		Password: "correct-horse-battery-staple",
 	})
-	res, err := http.Post(ts.URL+"/auth/login", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/login", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
@@ -267,7 +267,7 @@ func TestLoginRejectsWrongPassword(t *testing.T) {
 		Email:    "ada@example.com",
 		Password: "wrong-password",
 	})
-	res, err := http.Post(ts.URL+"/auth/login", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/login", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
@@ -294,7 +294,7 @@ func TestLoginRejectsUnknownUser(t *testing.T) {
 		Email:    "ghost@example.com",
 		Password: "any-password",
 	})
-	res, err := http.Post(ts.URL+"/auth/login", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/login", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
@@ -315,7 +315,7 @@ func TestLoginValidation(t *testing.T) {
 	defer ts.Close()
 
 	body, _ := json.Marshal(model.LoginRequest{Email: "", Password: ""})
-	res, err := http.Post(ts.URL+"/auth/login", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/login", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
@@ -350,7 +350,7 @@ func TestRegisterEnforcesPasswordPolicy(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			body, _ := json.Marshal(model.CreateUserRequest{Name: "Ada", Email: "ada@example.com", Password: tc.password})
-			res, err := http.Post(ts.URL+"/auth/register", "application/json", bytes.NewReader(body))
+			res, err := http.Post(ts.URL+"/v1/auth/register", "application/json", bytes.NewReader(body))
 			if err != nil {
 				t.Fatalf("register: %v", err)
 			}
@@ -381,7 +381,7 @@ func TestLoginMalformedJSON(t *testing.T) {
 	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
-	res, err := http.Post(ts.URL+"/auth/login", "application/json", bytes.NewReader([]byte("{")))
+	res, err := http.Post(ts.URL+"/v1/auth/login", "application/json", bytes.NewReader([]byte("{")))
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
@@ -396,7 +396,7 @@ func TestLoginWrongContentType(t *testing.T) {
 	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
-	res, err := http.Post(ts.URL+"/auth/login", "text/plain", bytes.NewReader([]byte("ok")))
+	res, err := http.Post(ts.URL+"/v1/auth/login", "text/plain", bytes.NewReader([]byte("ok")))
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
@@ -417,7 +417,7 @@ func TestMeWithValidToken(t *testing.T) {
 		t.Fatalf("issue: %v", err)
 	}
 
-	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/me", nil)
+	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/v1/me", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -442,7 +442,7 @@ func TestMeRejectsMissingHeader(t *testing.T) {
 	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
-	res, err := http.Get(ts.URL + "/me")
+	res, err := http.Get(ts.URL + "/v1/me")
 	if err != nil {
 		t.Fatalf("me: %v", err)
 	}
@@ -457,7 +457,7 @@ func TestMeRejectsMalformedHeader(t *testing.T) {
 	ts, _, _, _, _ := newAuthApp(t)
 	defer ts.Close()
 
-	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/me", nil)
+	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/v1/me", nil)
 	req.Header.Set("Authorization", "Token abc.def.ghi")
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -476,7 +476,7 @@ func TestMeRejectsExpiredToken(t *testing.T) {
 
 	expiredToken := jwtMintExpired(t, testJWTSecret)
 
-	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/me", nil)
+	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/v1/me", nil)
 	req.Header.Set("Authorization", "Bearer "+expiredToken)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -500,7 +500,7 @@ func TestMeRejectsTamperedToken(t *testing.T) {
 	}
 	tampered := token[:len(token)-2] + "AA"
 
-	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/me", nil)
+	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/v1/me", nil)
 	req.Header.Set("Authorization", "Bearer "+tampered)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {

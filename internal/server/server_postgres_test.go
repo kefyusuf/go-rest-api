@@ -65,7 +65,7 @@ func TestUsersCRUDFlowWithPostgres(t *testing.T) {
 
 	deletePostgresUser(t, ts.URL, bearer, created.ID)
 
-	res, err := http.NewRequest(http.MethodGet, ts.URL+"/users/"+intToString(created.ID), nil)
+	res, err := http.NewRequest(http.MethodGet, ts.URL+"/v1/users/"+intToString(created.ID), nil)
 	if err != nil {
 		t.Fatalf("build get deleted user failed: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestUsersDuplicateEmailWithPostgresReturnsConflict(t *testing.T) {
 		Password: "correct-password",
 	})
 
-	req, err := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(mustPostgresJSON(t, model.CreateUserRequest{
+	req, err := http.NewRequest(http.MethodPost, ts.URL+"/v1/users", bytes.NewReader(mustPostgresJSON(t, model.CreateUserRequest{
 		Name:     "Grace Hopper",
 		Email:    "ada@example.com",
 		Password: "correct-password",
@@ -182,7 +182,7 @@ func postgresBearer(t *testing.T, issuer *auth.TokenIssuer) string {
 func createPostgresUser(t *testing.T, baseURL, bearer string, input model.CreateUserRequest) model.User {
 	t.Helper()
 
-	req, err := http.NewRequest(http.MethodPost, baseURL+"/users", bytes.NewReader(mustPostgresJSON(t, input)))
+	req, err := http.NewRequest(http.MethodPost, baseURL+"/v1/users", bytes.NewReader(mustPostgresJSON(t, input)))
 	if err != nil {
 		t.Fatalf("build create user request failed: %v", err)
 	}
@@ -207,7 +207,7 @@ func createPostgresUser(t *testing.T, baseURL, bearer string, input model.Create
 func getPostgresUser(t *testing.T, baseURL, bearer string, id int) model.User {
 	t.Helper()
 
-	req, err := http.NewRequest(http.MethodGet, baseURL+"/users/"+intToString(id), nil)
+	req, err := http.NewRequest(http.MethodGet, baseURL+"/v1/users/"+intToString(id), nil)
 	if err != nil {
 		t.Fatalf("build get user request failed: %v", err)
 	}
@@ -231,7 +231,7 @@ func getPostgresUser(t *testing.T, baseURL, bearer string, id int) model.User {
 func updatePostgresUser(t *testing.T, baseURL, bearer string, id int, input model.UpdateUserRequest) model.User {
 	t.Helper()
 
-	req, err := http.NewRequest(http.MethodPut, baseURL+"/users/"+intToString(id), bytes.NewReader(mustPostgresJSON(t, input)))
+	req, err := http.NewRequest(http.MethodPut, baseURL+"/v1/users/"+intToString(id), bytes.NewReader(mustPostgresJSON(t, input)))
 	if err != nil {
 		t.Fatalf("build update request failed: %v", err)
 	}
@@ -256,7 +256,7 @@ func updatePostgresUser(t *testing.T, baseURL, bearer string, id int, input mode
 func deletePostgresUser(t *testing.T, baseURL, bearer string, id int) {
 	t.Helper()
 
-	req, err := http.NewRequest(http.MethodDelete, baseURL+"/users/"+intToString(id), nil)
+	req, err := http.NewRequest(http.MethodDelete, baseURL+"/v1/users/"+intToString(id), nil)
 	if err != nil {
 		t.Fatalf("build delete request failed: %v", err)
 	}

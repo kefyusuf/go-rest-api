@@ -33,9 +33,9 @@ table below; the per-layer branches exist only as a learning history.
 
 - Standard `net/http` server with timeouts, graceful shutdown, recovery
 - Standardised error envelope with `code`, `message`, and `details`
-- JWT auth: `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`,
-  `POST /auth/logout`, `POST /auth/forgot-password`, `POST /auth/reset-password`,
-  `GET /me`
+- JWT auth: `POST /v1/auth/register`, `POST /v1/auth/login`, `POST /v1/auth/refresh`,
+  `POST /v1/auth/logout`, `POST /v1/auth/forgot-password`, `POST /v1/auth/reset-password`,
+  `GET /v1/me`
 - Password policy: minimum 8 characters and maximum 72 bytes on
   register, user create, and password reset
 - bcrypt password hashing; Argon2 is a drop-in if you need it
@@ -43,7 +43,7 @@ table below; the per-layer branches exist only as a learning history.
 - Per-IP rate limiting (global + auth limiters) with a `Retry-After` header
 - Security headers (`X-Content-Type-Options`, `X-Frame-Options`,
   `Referrer-Policy`) and opt-in CORS
-- `Idempotency-Key` support on `POST /users` and `POST /auth/register`
+- `Idempotency-Key` support on `POST /v1/users` and `POST /v1/auth/register`
 - Bearer-protected users CRUD (list/get/create/update/delete)
 - Background-job queue with exponential-backoff retry and a dead-letter list
 - Outbox + dispatcher for event publishing (in-memory publisher; Kafka

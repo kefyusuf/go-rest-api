@@ -21,11 +21,11 @@ func TestUsersRoutesRejectAnonymousCalls(t *testing.T) {
 		path   string
 		body   string
 	}{
-		{"list", http.MethodGet, "/users", ""},
-		{"get by id", http.MethodGet, "/users/1", ""},
-		{"create", http.MethodPost, "/users", `{"name":"Bob","email":"bob@example.com","password":"valid-password"}`},
-		{"update", http.MethodPut, "/users/1", `{"name":"Ada Byron","email":"ada.byron@example.com"}`},
-		{"delete", http.MethodDelete, "/users/1", ""},
+		{"list", http.MethodGet, "/v1/users", ""},
+		{"get by id", http.MethodGet, "/v1/users/1", ""},
+		{"create", http.MethodPost, "/v1/users", `{"name":"Bob","email":"bob@example.com","password":"valid-password"}`},
+		{"update", http.MethodPut, "/v1/users/1", `{"name":"Ada Byron","email":"ada.byron@example.com"}`},
+		{"delete", http.MethodDelete, "/v1/users/1", ""},
 	}
 
 	for _, tc := range cases {
@@ -68,7 +68,7 @@ func TestAuthenticatedUserCanListAndGet(t *testing.T) {
 	registerUser(t, ts, "Ada", "ada@example.com", "valid-password")
 	token := registerUser(t, ts, "Grace", "grace@example.com", "valid-password").AccessToken
 
-	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/users", nil)
+	req, _ := http.NewRequest(http.MethodGet, ts.URL+"/v1/users", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -85,7 +85,7 @@ func TestAuthenticatedUserCanListAndGet(t *testing.T) {
 		t.Fatalf("expected 2 users in list, got %d", len(list.Data))
 	}
 
-	get, err := http.NewRequest(http.MethodGet, ts.URL+"/users/1", nil)
+	get, err := http.NewRequest(http.MethodGet, ts.URL+"/v1/users/1", nil)
 	if err != nil {
 		t.Fatalf("build get: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestAuthenticatedCreateUpdateDeleteCycle(t *testing.T) {
 	createBody := mustJSON(t, model.CreateUserRequest{
 		Name: "Bob", Email: "bob@example.com", Password: "valid-password",
 	})
-	authReq, _ := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(createBody))
+	authReq, _ := http.NewRequest(http.MethodPost, ts.URL+"/v1/users", bytes.NewReader(createBody))
 	authReq.Header.Set("Content-Type", "application/json")
 	authReq.Header.Set("Authorization", "Bearer "+token)
 	authRes, err := http.DefaultClient.Do(authReq)
@@ -125,7 +125,7 @@ func TestAuthenticatedCreateUpdateDeleteCycle(t *testing.T) {
 	decodeJSON(t, authRes.Body, &created)
 
 	updateBody := mustJSON(t, model.UpdateUserRequest{Name: "Bob B.", Email: "bob.b@example.com"})
-	update, _ := http.NewRequest(http.MethodPut, ts.URL+"/users/"+intToString(created.ID), bytes.NewReader(updateBody))
+	update, _ := http.NewRequest(http.MethodPut, ts.URL+"/v1/users/"+intToString(created.ID), bytes.NewReader(updateBody))
 	update.Header.Set("Content-Type", "application/json")
 	update.Header.Set("Authorization", "Bearer "+token)
 	res3, err := http.DefaultClient.Do(update)
@@ -137,7 +137,7 @@ func TestAuthenticatedCreateUpdateDeleteCycle(t *testing.T) {
 		t.Fatalf("expected 200 on update, got %d", res3.StatusCode)
 	}
 
-	del, _ := http.NewRequest(http.MethodDelete, ts.URL+"/users/"+intToString(created.ID), nil)
+	del, _ := http.NewRequest(http.MethodDelete, ts.URL+"/v1/users/"+intToString(created.ID), nil)
 	del.Header.Set("Authorization", "Bearer "+token)
 	res4, err := http.DefaultClient.Do(del)
 	if err != nil {

@@ -45,7 +45,7 @@ func registerUser(t *testing.T, ts *httptest.Server, name, email, password strin
 	body, _ := json.Marshal(model.CreateUserRequest{
 		Name: name, Email: email, Password: password,
 	})
-	res, err := http.Post(ts.URL+"/auth/register", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/register", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("register: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestRegisterRejectsDuplicateEmail(t *testing.T) {
 	body, _ := json.Marshal(model.CreateUserRequest{
 		Name: "Other", Email: "ada@example.com", Password: "valid-password",
 	})
-	res, err := http.Post(ts.URL+"/auth/register", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/register", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("register: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestRegisterValidationRejectsMissingFields(t *testing.T) {
 	defer ts.Close()
 
 	body, _ := json.Marshal(model.CreateUserRequest{Name: "", Email: "", Password: ""})
-	res, err := http.Post(ts.URL+"/auth/register", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/register", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("register: %v", err)
 	}
@@ -118,7 +118,7 @@ func TestRegisterWrongContentType(t *testing.T) {
 	ts, _, _, _, _ := newSessionApp(t)
 	defer ts.Close()
 
-	res, err := http.Post(ts.URL+"/auth/register", "text/plain", bytes.NewReader([]byte("ok")))
+	res, err := http.Post(ts.URL+"/v1/auth/register", "text/plain", bytes.NewReader([]byte("ok")))
 	if err != nil {
 		t.Fatalf("register: %v", err)
 	}
@@ -135,7 +135,7 @@ func TestLoginReturnsRefreshToken(t *testing.T) {
 	registerUser(t, ts, "Ada", "ada@example.com", "valid-password")
 
 	body, _ := json.Marshal(model.LoginRequest{Email: "ada@example.com", Password: "valid-password"})
-	res, err := http.Post(ts.URL+"/auth/login", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/login", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("login: %v", err)
 	}
@@ -155,7 +155,7 @@ func TestLogoutRevokesAccessToken(t *testing.T) {
 	defer ts.Close()
 	session := registerUser(t, ts, "Ada", "ada@example.com", "valid-password")
 
-	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/auth/logout", nil)
+	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/v1/auth/logout", nil)
 	req.Header.Set("Authorization", "Bearer "+session.AccessToken)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -166,7 +166,7 @@ func TestLogoutRevokesAccessToken(t *testing.T) {
 		t.Fatalf("expected 204, got %d", res.StatusCode)
 	}
 
-	meReq, _ := http.NewRequest(http.MethodGet, ts.URL+"/me", nil)
+	meReq, _ := http.NewRequest(http.MethodGet, ts.URL+"/v1/me", nil)
 	meReq.Header.Set("Authorization", "Bearer "+session.AccessToken)
 	meRes, err := http.DefaultClient.Do(meReq)
 	if err != nil {
@@ -182,7 +182,7 @@ func TestLogoutRejectsMissingHeader(t *testing.T) {
 	ts, _, _, _, _ := newSessionApp(t)
 	defer ts.Close()
 
-	res, err := http.Post(ts.URL+"/auth/logout", "application/json", nil)
+	res, err := http.Post(ts.URL+"/v1/auth/logout", "application/json", nil)
 	if err != nil {
 		t.Fatalf("logout: %v", err)
 	}
@@ -198,7 +198,7 @@ func TestRefreshIssuesNewTokens(t *testing.T) {
 	session := registerUser(t, ts, "Ada", "ada@example.com", "valid-password")
 
 	body, _ := json.Marshal(model.RefreshRequest{RefreshToken: session.RefreshToken})
-	res, err := http.Post(ts.URL+"/auth/refresh", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/refresh", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -223,7 +223,7 @@ func TestRefreshRejectsAlreadyUsedToken(t *testing.T) {
 	session := registerUser(t, ts, "Ada", "ada@example.com", "valid-password")
 
 	body, _ := json.Marshal(model.RefreshRequest{RefreshToken: session.RefreshToken})
-	first, err := http.Post(ts.URL+"/auth/refresh", "application/json", bytes.NewReader(body))
+	first, err := http.Post(ts.URL+"/v1/auth/refresh", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -232,7 +232,7 @@ func TestRefreshRejectsAlreadyUsedToken(t *testing.T) {
 		t.Fatalf("expected first refresh 200, got %d", first.StatusCode)
 	}
 
-	replay, err := http.Post(ts.URL+"/auth/refresh", "application/json", bytes.NewReader(body))
+	replay, err := http.Post(ts.URL+"/v1/auth/refresh", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("replay: %v", err)
 	}
@@ -248,7 +248,7 @@ func TestRefreshRejectsAccessToken(t *testing.T) {
 	session := registerUser(t, ts, "Ada", "ada@example.com", "valid-password")
 
 	body, _ := json.Marshal(model.RefreshRequest{RefreshToken: session.AccessToken})
-	res, err := http.Post(ts.URL+"/auth/refresh", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/refresh", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("refresh: %v", err)
 	}
@@ -264,7 +264,7 @@ func TestForgotPasswordReturns202(t *testing.T) {
 	registerUser(t, ts, "Ada", "ada@example.com", "valid-password")
 
 	body, _ := json.Marshal(model.ForgotPasswordRequest{Email: "ada@example.com"})
-	res, err := http.Post(ts.URL+"/auth/forgot-password", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/forgot-password", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("forgot: %v", err)
 	}
@@ -288,7 +288,7 @@ func TestForgotPasswordAlwaysReturns202ForUnknownEmail(t *testing.T) {
 	defer ts.Close()
 
 	body, _ := json.Marshal(model.ForgotPasswordRequest{Email: "ghost@example.com"})
-	res, err := http.Post(ts.URL+"/auth/forgot-password", "application/json", bytes.NewReader(body))
+	res, err := http.Post(ts.URL+"/v1/auth/forgot-password", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("forgot: %v", err)
 	}
@@ -310,7 +310,7 @@ func TestResetPasswordChangesPassword(t *testing.T) {
 	registerUser(t, ts, "Ada", "ada@example.com", "old-password")
 
 	body, _ := json.Marshal(model.ForgotPasswordRequest{Email: "ada@example.com"})
-	forgotRes, err := http.Post(ts.URL+"/auth/forgot-password", "application/json", bytes.NewReader(body))
+	forgotRes, err := http.Post(ts.URL+"/v1/auth/forgot-password", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("forgot: %v", err)
 	}
@@ -322,7 +322,7 @@ func TestResetPasswordChangesPassword(t *testing.T) {
 		Token:    forgotOut.Token,
 		Password: "new-password",
 	})
-	resetRes, err := http.Post(ts.URL+"/auth/reset-password", "application/json", bytes.NewReader(resetBody))
+	resetRes, err := http.Post(ts.URL+"/v1/auth/reset-password", "application/json", bytes.NewReader(resetBody))
 	if err != nil {
 		t.Fatalf("reset: %v", err)
 	}
@@ -332,14 +332,14 @@ func TestResetPasswordChangesPassword(t *testing.T) {
 	}
 
 	loginOld, _ := json.Marshal(model.LoginRequest{Email: "ada@example.com", Password: "old-password"})
-	oldRes, _ := http.Post(ts.URL+"/auth/login", "application/json", bytes.NewReader(loginOld))
+	oldRes, _ := http.Post(ts.URL+"/v1/auth/login", "application/json", bytes.NewReader(loginOld))
 	oldRes.Body.Close()
 	if oldRes.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("old password should fail after reset, got %d", oldRes.StatusCode)
 	}
 
 	loginNew, _ := json.Marshal(model.LoginRequest{Email: "ada@example.com", Password: "new-password"})
-	newRes, err := http.Post(ts.URL+"/auth/login", "application/json", bytes.NewReader(loginNew))
+	newRes, err := http.Post(ts.URL+"/v1/auth/login", "application/json", bytes.NewReader(loginNew))
 	if err != nil {
 		t.Fatalf("login new: %v", err)
 	}
@@ -355,7 +355,7 @@ func TestResetPasswordRejectsReusedToken(t *testing.T) {
 	registerUser(t, ts, "Ada", "ada@example.com", "old-password")
 
 	body, _ := json.Marshal(model.ForgotPasswordRequest{Email: "ada@example.com"})
-	forgotRes, err := http.Post(ts.URL+"/auth/forgot-password", "application/json", bytes.NewReader(body))
+	forgotRes, err := http.Post(ts.URL+"/v1/auth/forgot-password", "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("forgot: %v", err)
 	}
@@ -364,7 +364,7 @@ func TestResetPasswordRejectsReusedToken(t *testing.T) {
 	decodeJSON(t, forgotRes.Body, &forgotOut)
 
 	resetBody, _ := json.Marshal(model.ResetPasswordRequest{Token: forgotOut.Token, Password: "new-valid-password"})
-	first, err := http.Post(ts.URL+"/auth/reset-password", "application/json", bytes.NewReader(resetBody))
+	first, err := http.Post(ts.URL+"/v1/auth/reset-password", "application/json", bytes.NewReader(resetBody))
 	if err != nil {
 		t.Fatalf("first reset: %v", err)
 	}
@@ -373,7 +373,7 @@ func TestResetPasswordRejectsReusedToken(t *testing.T) {
 		t.Fatalf("expected first reset 204, got %d", first.StatusCode)
 	}
 
-	second, err := http.Post(ts.URL+"/auth/reset-password", "application/json", bytes.NewReader(resetBody))
+	second, err := http.Post(ts.URL+"/v1/auth/reset-password", "application/json", bytes.NewReader(resetBody))
 	if err != nil {
 		t.Fatalf("second reset: %v", err)
 	}
@@ -388,7 +388,7 @@ func TestResetPasswordRejectsBadToken(t *testing.T) {
 	defer ts.Close()
 
 	resetBody, _ := json.Marshal(model.ResetPasswordRequest{Token: "deadbeef", Password: "new-valid-password"})
-	res, err := http.Post(ts.URL+"/auth/reset-password", "application/json", bytes.NewReader(resetBody))
+	res, err := http.Post(ts.URL+"/v1/auth/reset-password", "application/json", bytes.NewReader(resetBody))
 	if err != nil {
 		t.Fatalf("reset: %v", err)
 	}

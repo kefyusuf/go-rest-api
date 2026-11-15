@@ -25,8 +25,8 @@ func TestMetricsHandlerExposesPrometheus(t *testing.T) {
 	m.IncInFlight()
 	m.DecInFlight()
 	m.RecordHTTP("GET", "/health", 200, 5*time.Millisecond)
-	m.RecordHTTP("POST", "/users", 201, 12*time.Millisecond)
-	m.RecordHTTP("POST", "/users", 500, 100*time.Millisecond)
+	m.RecordHTTP("POST", "/v1/users", 201, 12*time.Millisecond)
+	m.RecordHTTP("POST", "/v1/users", 500, 100*time.Millisecond)
 
 	req := httptest.NewRequest("GET", "/metrics", nil)
 	rec := httptest.NewRecorder()
@@ -43,7 +43,7 @@ func TestMetricsHandlerExposesPrometheus(t *testing.T) {
 	if !strings.Contains(body, `path="/health"`) {
 		t.Fatalf("expected body to contain path=/health, got:\n%s", body)
 	}
-	if !strings.Contains(body, `path="/users"`) {
+	if !strings.Contains(body, `path="/v1/users"`) {
 		t.Fatalf("expected body to contain path=/users, got:\n%s", body)
 	}
 	if !strings.Contains(body, `status="200"`) {

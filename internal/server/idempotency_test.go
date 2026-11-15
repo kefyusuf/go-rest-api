@@ -44,7 +44,7 @@ func TestIdempotencyReplaysSameKeySameBody(t *testing.T) {
 	})
 
 	post := func() *http.Response {
-		req, _ := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(body))
+		req, _ := http.NewRequest(http.MethodPost, ts.URL+"/v1/users", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Idempotency-Key", "users-create-1")
 		req.Header.Set("Authorization", "Bearer "+token)
@@ -85,7 +85,7 @@ func TestIdempotencyRejectsSameKeyDifferentBody(t *testing.T) {
 		Name: "Grace", Email: "grace@example.com", Password: "valid-password",
 	})
 
-	req1, _ := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(first))
+	req1, _ := http.NewRequest(http.MethodPost, ts.URL+"/v1/users", bytes.NewReader(first))
 	req1.Header.Set("Content-Type", "application/json")
 	req1.Header.Set("Idempotency-Key", "key-1")
 	req1.Header.Set("Authorization", "Bearer "+token)
@@ -98,7 +98,7 @@ func TestIdempotencyRejectsSameKeyDifferentBody(t *testing.T) {
 		t.Fatalf("expected 201, got %d", res1.StatusCode)
 	}
 
-	req2, _ := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(second))
+	req2, _ := http.NewRequest(http.MethodPost, ts.URL+"/v1/users", bytes.NewReader(second))
 	req2.Header.Set("Content-Type", "application/json")
 	req2.Header.Set("Idempotency-Key", "key-1")
 	req2.Header.Set("Authorization", "Bearer "+token)
@@ -123,7 +123,7 @@ func TestIdempotencyNoKeyAlwaysCallsHandler(t *testing.T) {
 	})
 
 	post := func() *http.Response {
-		req, _ := http.NewRequest(http.MethodPost, ts.URL+"/users", bytes.NewReader(body))
+		req, _ := http.NewRequest(http.MethodPost, ts.URL+"/v1/users", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+token)
 		res, err := http.DefaultClient.Do(req)
@@ -155,7 +155,7 @@ func TestIdempotencyReplaysOnRegister(t *testing.T) {
 	})
 
 	post := func() *http.Response {
-		req, _ := http.NewRequest(http.MethodPost, ts.URL+"/auth/register", bytes.NewReader(body))
+		req, _ := http.NewRequest(http.MethodPost, ts.URL+"/v1/auth/register", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Idempotency-Key", "register-1")
 		res, err := http.DefaultClient.Do(req)

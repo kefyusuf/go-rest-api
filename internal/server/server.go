@@ -71,12 +71,12 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 			Logger:      logger,
 		})
 
-		mux.Handle("/auth/login", authLimiter(http.HandlerFunc(authHandler.Login)))
-		mux.Handle("/auth/register", authLimiter(WithIdempotency(IdempotencyOptions{Store: opts.IdempotencyStore}, http.HandlerFunc(authHandler.Register))))
-		mux.Handle("/auth/refresh", authLimiter(http.HandlerFunc(authHandler.Refresh)))
-		mux.Handle("/auth/forgot-password", authLimiter(http.HandlerFunc(authHandler.ForgotPassword)))
-		mux.Handle("/auth/reset-password", authLimiter(http.HandlerFunc(authHandler.ResetPassword)))
-		mux.Handle("/auth/logout", RequireAuth(opts.TokenIssuer, opts.Blacklist)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mux.Handle("/v1/auth/login", authLimiter(http.HandlerFunc(authHandler.Login)))
+		mux.Handle("/v1/auth/register", authLimiter(WithIdempotency(IdempotencyOptions{Store: opts.IdempotencyStore}, http.HandlerFunc(authHandler.Register))))
+		mux.Handle("/v1/auth/refresh", authLimiter(http.HandlerFunc(authHandler.Refresh)))
+		mux.Handle("/v1/auth/forgot-password", authLimiter(http.HandlerFunc(authHandler.ForgotPassword)))
+		mux.Handle("/v1/auth/reset-password", authLimiter(http.HandlerFunc(authHandler.ResetPassword)))
+		mux.Handle("/v1/auth/logout", RequireAuth(opts.TokenIssuer, opts.Blacklist)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			raw := r.Header.Get("Authorization")
 			parts := strings.SplitN(raw, " ", 2)
 			if len(parts) != 2 {
@@ -85,7 +85,7 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 			}
 			authHandler.Logout(w, r, strings.TrimSpace(parts[1]))
 		})))
-		mux.Handle("/me", globalLimiter(RequireAuth(opts.TokenIssuer, opts.Blacklist)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mux.Handle("/v1/me", globalLimiter(RequireAuth(opts.TokenIssuer, opts.Blacklist)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userID, ok := UserIDFromContext(r.Context())
 			if !ok {
 				response.Error(w, http.StatusUnauthorized, model.ErrorCodeUnauthorized, "missing or invalid bearer token", nil)
@@ -105,7 +105,7 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 		}
 		return RequireAuth(opts.TokenIssuer, opts.Blacklist)(next)
 	}
-	mux.Handle("/users", globalLimiter(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/v1/users", globalLimiter(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			protect(http.HandlerFunc(userHandler.ListUsers)).ServeHTTP(w, r)
@@ -115,7 +115,7 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 			response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
 		}
 	})))
-	mux.Handle("/users/", globalLimiter(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/v1/users/", globalLimiter(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			protect(http.HandlerFunc(userHandler.GetUserByID)).ServeHTTP(w, r)

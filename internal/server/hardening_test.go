@@ -96,7 +96,7 @@ func TestCORSPreflightReturns204(t *testing.T) {
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
-	req, _ := http.NewRequest(http.MethodOptions, ts.URL+"/users", nil)
+	req, _ := http.NewRequest(http.MethodOptions, ts.URL+"/v1/users", nil)
 	req.Header.Set("Origin", "https://example.com")
 	req.Header.Set("Access-Control-Request-Method", "POST")
 	res, err := http.DefaultClient.Do(req)
@@ -124,7 +124,7 @@ func TestRateLimitReturns429(t *testing.T) {
 	defer ts.Close()
 
 	for i := 0; i < 5; i++ {
-		res, err := http.Get(ts.URL + "/users")
+		res, err := http.Get(ts.URL + "/v1/users")
 		if err != nil {
 			t.Fatalf("get: %v", err)
 		}
@@ -174,7 +174,7 @@ func TestAuthRateLimitIndependentBucket(t *testing.T) {
 	body, _ := json.Marshal(map[string]string{"email": "x@x.com", "password": "x"})
 	var last int
 	for i := 0; i < 5; i++ {
-		res, err := http.Post(ts.URL+"/auth/login", "application/json", bytes.NewReader(body))
+		res, err := http.Post(ts.URL+"/v1/auth/login", "application/json", bytes.NewReader(body))
 		if err != nil {
 			t.Fatalf("post: %v", err)
 		}

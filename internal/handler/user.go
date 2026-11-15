@@ -39,7 +39,7 @@ func NewUserHandler(store store.UserStore, bcryptCost int, outbox events.Outbox,
 // @Produce json
 // @Success 200 {object} model.ListUsersResponse
 // @Failure 500 {object} model.ErrorResponse
-// @Router /users [get]
+// @Router /v1/users [get]
 func (h UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
@@ -74,7 +74,7 @@ func (h UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 // @Failure 409 {object} model.ErrorResponse
 // @Failure 415 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
-// @Router /users [post]
+// @Router /v1/users [post]
 func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
@@ -146,7 +146,7 @@ func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 // @Failure 404 {object} model.ErrorResponse
 // @Failure 405 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
-// @Router /users/{id} [get]
+// @Router /v1/users/{id} [get]
 func (h UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
@@ -183,7 +183,7 @@ func (h UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 // @Failure 409 {object} model.ErrorResponse
 // @Failure 415 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
-// @Router /users/{id} [put]
+// @Router /v1/users/{id} [put]
 func (h UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
 		response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
@@ -231,7 +231,7 @@ func (h UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 // @Failure 404 {object} model.ErrorResponse
 // @Failure 405 {object} model.ErrorResponse
 // @Failure 500 {object} model.ErrorResponse
-// @Router /users/{id} [delete]
+// @Router /v1/users/{id} [delete]
 func (h UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		response.MethodNotAllowed(w, model.ErrorCodeMethodNotAllowed, "method not allowed")
@@ -253,7 +253,7 @@ func (h UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func userIDFromPath(path string) (int, error) {
-	idText := strings.TrimPrefix(path, "/users/")
+	idText := strings.TrimPrefix(path, "/v1/users/")
 	if idText == "" || strings.Contains(idText, "/") {
 		return 0, errors.New("invalid user id")
 	}
