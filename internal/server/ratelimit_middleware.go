@@ -57,3 +57,11 @@ func ClientIPKey(r *http.Request) string {
 	}
 	return host
 }
+
+// AuthClientIPKey namespaces the auth limiter's per-IP buckets. The
+// Redis limiter builds its keys from this name, so without the prefix
+// the auth and global limiters would drain the same
+// "ratelimit:<ip>" bucket.
+func AuthClientIPKey(r *http.Request) string {
+	return "auth:" + ClientIPKey(r)
+}

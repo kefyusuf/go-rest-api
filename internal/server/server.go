@@ -49,7 +49,10 @@ func New(userStore store.UserStore, logger *slog.Logger, opts Options) http.Hand
 	userHandler := handler.NewUserHandler(userStore, opts.BcryptCost, opts.Outbox)
 	meHandler := handler.NewMeHandler(userStore)
 
-	authLimiter := RateLimit(RateLimitConfig{Limiter: opts.AuthLimiter})
+	// The auth limiter namespaces its per-IP keys so that, in the Redis
+	// path, the stricter auth buckets never share keys with the global
+	// limiter's buckets.
+	authLimiter := RateLimit(RateLimitConfig{Limiter: opts.AuthLimiter, KeyFunc: AuthClientIPKey})
 	globalLimiter := RateLimit(RateLimitConfig{Limiter: opts.GlobalLimiter})
 
 	if opts.HealthProbes != nil {
