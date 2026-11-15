@@ -98,13 +98,6 @@ func main() {
 	if resetTokenClose != nil {
 		defer resetTokenClose()
 	}
-	if err != nil {
-		logger.Error("failed to build cache", slog.String("error", err.Error()))
-		os.Exit(1)
-	}
-	if cacheClose != nil {
-		defer cacheClose()
-	}
 	userCache := cacheimpl.NewUserCache(cacheImpl, cfg.UserCacheTTL)
 	cachedStore := store.NewCachedUserStore(userStore, userCache, cfg.UserCacheTTL)
 
@@ -380,12 +373,11 @@ func buildRateLimiter(name string, rate, burst float64, cfg config.Config, logge
 	logger.Info("redis-backed rate limiter enabled",
 		slog.String("limiter", name),
 		slog.String("addr", opts.Addr))
-	// We do not prefix with a per-name key here because the
-	// caller passes a key; the RedisLimiter keyFor() adds the
-	// 'ratelimit:' prefix. Use a unique bucket per limiter via
-	// the key name (the HTTP middleware uses the client IP, so
-	// we need a per-limiter prefix; left for the middleware to
-	// handle — we use the name as a sub-namespace).
+	// Bucket keys come from the HTTP middleware: RedisLimiter.keyFor
+	// prefixes "ratelimit:" and the auth limiter's KeyFunc adds the
+	// "auth:" namespace (see server.AuthClientIPKey), so the global
+	// and auth limiters never drain the same Redis bucket despite
+	// sharing this client.
 	rl := ratelimit.NewRedis(client, rate, burst)
 	return rl, func() { _ = rl.Close() }, nil
 }
