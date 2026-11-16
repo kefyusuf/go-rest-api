@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 env:
@@ -20,13 +20,30 @@ jobs:
       - name: checkout
         uses: actions/checkout@v7
 
-      - name: extract version
+      # On a tag push the image gets the semantic version and :latest,
+      # and the annotated tag message becomes the GitHub release notes.
+      # A manual dispatch builds a dev-tagged image only, so it never
+      # moves :latest onto an untagged commit.
+      - name: derive image tags and release notes
         id: version
         run: |
+          IMAGE="ghcr.io/${REGISTRY_IMAGE}"
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+            {
+              echo "tags<<EOF"
+              echo "${IMAGE}:${GITHUB_REF#refs/tags/v}"
+              echo "${IMAGE}:latest"
+              echo "EOF"
+              echo "notes<<EOF"
+              git tag -l --format='%(contents)' "${GITHUB_REF#refs/tags/}"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "version=dev-${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+            {
+              echo "tags<<EOF"
+              echo "${IMAGE}:dev-${GITHUB_SHA::8}"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
           fi
 
       - name: set up docker buildx
@@ -45,8 +62,12 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name == 'push' }}
-          tags: |
-            ghcr.io/${{ env.REGISTRY_IMAGE }}:${{ steps.version.outputs.version }}
-            ghcr.io/${{ env.REGISTRY_IMAGE }}:latest
+          tags: ${{ steps.version.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: create the GitHub release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v3
+        with:
+          body: ${{ steps.version.outputs.notes }}
